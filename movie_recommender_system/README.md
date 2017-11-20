@@ -1,12 +1,10 @@
 This program implements a Recommender System to predict ratings of movies, utilizing products of factors for recommendation.  The loss fuction is optimized using ALS.
 The best model is found by utilizing 5 fold cross validation that is then used on the "test" set.
 The parameters that are searched on are:
-	- numBlocks
 	- rank or num of latent factors
 	- iterations of ALS to run
 	- lambda, the regularization parameter in ALS
-	- implicitPrefs - explicit or implicit feedback ALS (is the feedback implicit from users?)
-	- alpha - implicit feedback parameter, governs baseline confidence 
+	- seed, random number seed
 
 Steps to run program
  - Download files from the MovieLens website http://files.grouplens.org/datasets/movielens/ml-latest.zip
