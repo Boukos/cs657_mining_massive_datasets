@@ -11,6 +11,7 @@ from pyspark.sql import Row
 #import mllib
 from pyspark.mllib.evaluation import RegressionMetrics
 from pyspark.mllib.regression import LabeledPoint, LinearRegressionWithSGD, LinearRegressionModel
+from pyspark.mllib.recommendation import ALS, MatrixFactorizationModel, Rating
 #from pyspark.mllib.feature import StandardScalar, StandardScalerModel
 
 # import python stuff
@@ -57,12 +58,11 @@ def cv_split(rdd, k_folds, test_k):
 def get_best_params(min_RMSE, zipped_results):
     return [tup[1:] for tup in zipped_results if tup[0] == min_RMSE][0]
 
-def evaluate_lm(train_set, test_set, step, batch_pct, reg, reg_param, iterations=100):
+def evaluate_recommender(train_set, test_set, rank, itr, reg_param, seed=12345):
     # Evalute the model on training data
-    lm = LinearRegressionWithSGD.train(train_set, iterations=iterations, \
-                                       step=step, miniBatchFraction=batch_pct,\
-                                       regType=reg, regParam=reg_param,\
-                                       intercept=True, validateData=False )
+    rec_model = ALS.train(train_set, rank, seed=seed, iterations=itr, lambda_=reg_param)
+    test_set = test_set.map()
+    prediction = rec_model.predictALL(validation)
 
     values_and_preds = test_set.map(lambda x: (x.label,
                                                float(lm.predict(x.features))))
@@ -127,7 +127,8 @@ def main():
     # to -> [(rand_fold_i, Rating(u1, mi, ri)), ..]
     ratings = data.map(lambda row: row.split(",")) \
                   .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
-    ratings.cache()
+    train_set, test_set = ratings.randomSplit([0.8, 0.2], seed=seed)
+    train_set.cache()
 
     # run cross validation on linear regression model
     # SGD step (alpha), batch percent
@@ -139,7 +140,7 @@ def main():
             for k in range(k_folds):
                 #-------------------Start of CV--------------------------#
                 # create CV sets
-                train_rdd, validate_rdd = cv_split(ratings, k_folds, k)
+                train_rdd, validate_rdd = cv_split(train_set, k_folds, k)
 
                 # find evaluation metrics
                 MSE, RMSE, exp_var, MAE = evaluate_lm(train_rdd, validate_rdd,
