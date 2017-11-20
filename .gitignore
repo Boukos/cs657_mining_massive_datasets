@@ -1,0 +1,5 @@
+data/*
+output/*
+hydra_output/*
+metastore_db/*
+derby.log
