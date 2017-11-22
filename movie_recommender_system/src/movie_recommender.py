@@ -61,12 +61,18 @@ def get_best_params(min_RMSE, zipped_results):
 def evaluate_recommender(train_set, test_set, rank, itr, reg_param, seed=12345):
     # Evalute the model on training data
     rec_model = ALS.train(train_set, rank, seed=seed, iterations=itr, lambda_=reg_param)
-    test_set = test_set.map()
-    prediction = rec_model.predictALL(validation)
+    
+    # remove the ratings for the test set
+    test_against = test_set.map(lambda x: (x[0], x[1]))
+    # make predictions from model
+    # returns [((ui, mi), ratingi), ...]
+    predictions = rec_model.predictALL(test_against).map(lambda x: ((x[0], x[1]), x[2]))
 
-    values_and_preds = test_set.map(lambda x: (x.label,
-                                               float(lm.predict(x.features))))
-    return get_lr_evals(values_and_preds)
+    # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
+    ratings_and_preds = test_set.map(lambda x: (int(x[0]), int([1]),
+                                                float([2]))).join(predictions)
+
+    return get_lr_evals(ratings_and_preds.map(lambda x: x[1])
 
 def main():
     start_time = time.time()
