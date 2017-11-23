@@ -19,8 +19,6 @@ import numpy as np
 import os
 import csv
 import sys
-import pickle
-import math
 from random import randint
 from itertools import izip, izip_longest
 import time
@@ -39,6 +37,9 @@ def test_results_to_disk(fn, metrics):
         wr = csv.writer(results)
         wr.writerow(metrics)
 
+# helper function to create generators
+def create_static_var_gen(var, n_elements):
+    return (var for i in xrange(n_elements))
 
 # parse the data, convert str to floats and ints as appropriate
 def get_evals(y_and_yhats):
@@ -60,7 +61,7 @@ def get_best_params(min_RMSE, zipped_results):
 
 def evaluate_recommender(train_set, test_set, rank, itr, reg_param, seed=12345):
     # Evalute the model on training data
-    rec_model = ALS.train(train_set, rank, seed=seed, iterations=itr, lambda_=reg_param)
+    rec_model = ALS.train(train_set, rank=rank, seed=seed, iterations=itr, lambda_=reg_param)
     
     # remove the ratings for the test set
     test_against = test_set.map(lambda x: (x[0], x[1]))
@@ -69,9 +70,7 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, seed=12345):
     predictions = rec_model.predictALL(test_against).map(lambda x: ((x[0], x[1]), x[2]))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
-    ratings_and_preds = test_set.map(lambda x: (int(x[0]), int([1]),
-                                                float([2]))).join(predictions)
-
+    ratings_and_preds = test_set.map(lambda x: (x[0], x[1]), x[2]).join(predictions)
     return get_evals(ratings_and_preds.map(lambda x: x[1]))
 
 def main():
@@ -81,10 +80,10 @@ def main():
     if len(sys.argv) < 3:
         # assuming hydra hdfs with test_input directory
         print("you didnt give directory inputs, using test file")
-        input_dir = "test_input"
-        input_fn = "tiny"
-        input_file_path = os.path.join(input_dir, input_fn+".csv")
-        output_fn="test"
+        input_dir = "data"
+        input_fn = "ratings.csv"
+        input_file_path = os.path.join(input_dir, input_fn)
+        output_fn="original_test.csv"
 
     # filenames given, assuming in hydra
     else:
@@ -97,12 +96,14 @@ def main():
         print(input_file_path)
 
     # Optimization params
-    # since we have ratings our feedback is explicit, and therefore ignoring
-    # implicit parameters
+    # since we have ratings our feedback is explicit, 
+    # therefore ignoring the implicit parameters
     ranks = [x for x in range(5, 20, 5)]
     reg_params = [x / float(1000) for x in range(1, 600, 100)]
     iterations = 5
     seed = 12345
+    # choose model based on lowest RMSE or MAE
+    optimize_RMSE = True
 
     # CV
     # dataset size is ~26E6
@@ -162,14 +163,14 @@ def main():
                 # store results
                 MSE_results.append(results[0])
                 RMSE_results.append(results[1])
-                exp_vars.append(results[2])
+                exp_vars_results.append(results[2])
                 MAE_results.append(results[3])
                 #---------------------End of CV--------------------------#
 
             # update eval lists
             MSE_avgs.append(np.mean(MSE_results))
             RMSE_avgs.append(np.mean(RMSE_results))
-            exp_var_avgs.append(np.mean(exp_vars))
+            exp_var_avgs.append(np.mean(exp_vars_results))
             MAE_avgs.append(np.mean(MAE_results))
 
             # reset cv lists
@@ -187,53 +188,61 @@ def main():
     # save to disk
     fn = os.path.join("..","results","training_results.csv")
 
-    run_sample_pct = 1E-5
-    run_size = (run_sample_pct * dataset_size for i in
-                xrange(len(rank_tracker)))
+    # n length generators for static values
+    # e.g. (5,5,5,5,5,...)
+    n_runs = len(rank_tracker)
+    run_size = create_static_var_gen(run_sample_pct * dataset_size, n_runs)
+    iters = create_static_var_gen(iterations, n_runs)
+    cv_folds = create_static_var_gen(k_folds, n_runs)
     
 	
-    # izip_longest to repeat file_path_name for each of the values
-    train_results_to_disk(fn, izip_longest([input_fn], RMSE_avgs, 
-                            MSE_avgs, MAE_avgs, exp_var_avgs, 
-                            rank_tracker, reg_param_tracker, timings,
-                            fillvalue=input_fn))
+    # izip returns generator to save space 
+    train_results_to_disk(fn, izip(run_size, RMSE_avgs, MSE_avgs, MAE_avgs,
+                                   exp_var_avgs, timings, rank_tracker, 
+                                   reg_param_tracker, iters, cv_folds))
 
     # delete result lists to save RAM
-    del timings, MSE_avgs, MSE_results, RMSE_results, exp_vars, MAE_avgs
+    del timings, MSE_avgs, MSE_results, RMSE_results, exp_vars_avgs
+    del exp_vars_results, MAE_results
+
+    # delete MAE or RMSE
+    if optimize_RMSE: del MAE_avgs 
+    else: del RMSE_avgs
 
     # next find best params
-    min_train_RMSE = min(RMSE_avgs)
-
-	# Create lazy zip to reduce memory
-    # results == [(RMSEi, stepi, batch_fraci, reg_typei, reg_paramsi), ... ]
-    zipped_results = izip(RMSE_avgs, steps, batch_fractions, reg_types, reg_params)
+    # Create lazy zip to reduce memory
+    # results == [(RMSEi or MAEi, ranki, reg_parami), ... ]
+    if optimize_RMSE:
+        min_param = min(RMSE_avgs)
+        zipped_results = izip(RMSE_avgs, rank_tracker, reg_param_tracker)
+    else: #use MAE
+        min_param = min(MAE_avgs)
+        zipped_results = izip(MAE_avgs, rank_tracker, reg_param_tracker)
 	
 	# iterate through results and find the params with the min loss
-    step, batch_pct, reg, reg_param = get_best_params(min_train_RMSE, zipped_results)
+    rank, reg_param = get_best_params(min_param, zipped_results)
 
     # delete param lists to save RAM
-    del RMSE_avgs, steps, batch_fractions, reg_types, reg_params
+    del rank_tracker, reg_param_tracker
+    if optimize_RMSE: del MAE_avgs 
+    else: del RMSE_avgs
 
     # Now run tuned model vs test
-    # convert RDDs to LabeledPoint RDDs to use with mllib, get lm eval metrics
     test_start = time.time()
-    train_rdd, test_rdd = convert_to_LabeledPoint(train_set, test_set)
 	
 	# not sure if mllib caches rdd in the background or not
-    train_rdd.cache()
-    test_rdd.cache()
+    test_set.cache()
 	
 	# return test results
-    MSE, RMSE, exp_var, MAE = evaluate_recommender(train_rdd, test_rdd, step, batch_pct,
-                                     reg, reg_param, iterations)
+    results = evaluate_recommender(train_set, test_set, rank, iterations, reg_param)
+    MSE, RMSE, exp_var, MAE = results
+    optimizations = create_static_var_gen(optmize_RMSE, n_runs)
 
     # save test results to local disk
     fn = os.path.join("..","results", output_fn)
-    test_results_to_disk(fn, (input_fn, MSE, RMSE, exp_var,
-                              min_train_RMSE, step, batch_pct, reg,
-                              reg_param, SGD_run, reg_run,
-                              time.time() - test_start,
-                              time.time() - start_time, MAE))
+    test_results_to_disk(fn, (run_size, RMSE, MSE, MAE, exp_var, timings, rank,
+                              reg_param, optimize_RMSE, time.time() - test_start,
+                              time.time() - start_time))
 
 if __name__ == "__main__":
     main()
