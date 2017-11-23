@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import findspark
-findspark.init()
+#import findspark
+#findspark.init()
 
 # import spark stuff
 from pyspark import SparkContext
@@ -41,11 +41,11 @@ def test_results_to_disk(fn, metrics):
 
 
 # parse the data, convert str to floats and ints as appropriate
-def get_evals(predictions):
-    metrics = RegressionMetrics(predictions)
+def get_evals(y_and_yhats):
+    metrics = RegressionMetrics(y_and_yhats)
     # MSE, RMSE, var, MAE
-    return metrics.meanSquaredError, metrics.rootMeanSquaredError, \
-            metrics.explainedVariance, metrics.meanAbsoluteError
+    return (metrics.meanSquaredError, metrics.rootMeanSquaredError, \
+            metrics.explainedVariance, metrics.meanAbsoluteError)
 
 def cv_split(rdd, k_folds, test_k):
     # use mod and rand cv to filter train and validation sets
@@ -72,17 +72,17 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, seed=12345):
     ratings_and_preds = test_set.map(lambda x: (int(x[0]), int([1]),
                                                 float([2]))).join(predictions)
 
-    return get_lr_evals(ratings_and_preds.map(lambda x: x[1])
+    return get_evals(ratings_and_preds.map(lambda x: x[1]))
 
 def main():
     start_time = time.time()
     # input parameters
     # filenames not given use default
     if len(sys.argv) < 3:
+        # assuming hydra hdfs with test_input directory
         print("you didnt give directory inputs, using test file")
         input_dir = "test_input"
-        input_fn = "tiny_processed"
-        #input_fn = "thousand_processed"
+        input_fn = "tiny"
         input_file_path = os.path.join(input_dir, input_fn+".csv")
         output_fn="test"
 
@@ -105,7 +105,8 @@ def main():
     seed = 12345
 
     # CV
-    n_frac = 0.001
+    # dataset size is ~26E6
+    run_sample_pct = 1E-5
     k_folds = 5
 
     # param lists
@@ -120,12 +121,18 @@ def main():
     conf = SparkConf().setMaster("local").setAppName("linear_regression.py")
     sc = SparkContext(conf = conf)
 
-    # take out header
+    # read in data
     all_data = sc.textFile(input_file_path)
+    dataset_size = all_data.count() - 1
+
+    # take out header
     header = all_data.first()
     all_data = all_data.filter(lambda x: x != header)
+
     # take sample of dataset
-    data = all_data.sample(withReplacement=False, fraction=n_frac, seed=seed)
+    data = all_data.sample(withReplacement=False, fraction=run_sample_pct,
+                           seed=seed).cache()
+
 
     # Need to convert list of strings to mllib.Ratings
     # And add a random fold assignment for CV
@@ -149,15 +156,14 @@ def main():
                 train_rdd, validate_rdd = cv_split(train_set, k_folds, k)
 
                 # find evaluation metrics
-                MSE, RMSE, exp_var, MAE = evaluate_lm(train_rdd, validate_rdd,
-                                                 step, batch_pct, reg,
-                                                 reg_param, iterations)
+                results = evaluate_recommender(train_rdd, validate_rdd, rank,
+                                               iterations, reg_param)
 
                 # store results
-                MSE_results.append(MSE)
-                RMSE_results.append(RMSE)
-                exp_vars.append(exp_var)
-                MAE_results.append(MAE)
+                MSE_results.append(results[0])
+                RMSE_results.append(results[1])
+                exp_vars.append(results[2])
+                MAE_results.append(results[3])
                 #---------------------End of CV--------------------------#
 
             # update eval lists
@@ -170,10 +176,8 @@ def main():
             MSE_results, RMSE_results, exp_vars = [], [], []
 
             # update param lists
-            steps.append(step)
-            batch_fractions.append(batch_pct)
-            reg_types.append(reg)
-            reg_params.append(reg_param)
+            rank_tracker.append(rank)
+            reg_param_tracker.append(reg_param)
 
             # update timings
             timings.append(time.time() - cv_start)
@@ -182,11 +186,16 @@ def main():
     # Finished Grid Search Cross Validation runs
     # save to disk
     fn = os.path.join("..","results","training_results.csv")
+
+    run_sample_pct = 1E-5
+    run_size = (run_sample_pct * dataset_size for i in
+                xrange(len(rank_tracker)))
+    
 	
     # izip_longest to repeat file_path_name for each of the values
     train_results_to_disk(fn, izip_longest([input_fn], RMSE_avgs, 
-                            MSE_avgs, steps, batch_fractions,
-                            reg_types, reg_params, timings, MAE_avgs,
+                            MSE_avgs, MAE_avgs, exp_var_avgs, 
+                            rank_tracker, reg_param_tracker, timings,
                             fillvalue=input_fn))
 
     # delete result lists to save RAM
@@ -215,7 +224,7 @@ def main():
     test_rdd.cache()
 	
 	# return test results
-    MSE, RMSE, exp_var, MAE = evaluate_lm(train_rdd, test_rdd, step, batch_pct,
+    MSE, RMSE, exp_var, MAE = evaluate_recommender(train_rdd, test_rdd, step, batch_pct,
                                      reg, reg_param, iterations)
 
     # save test results to local disk
