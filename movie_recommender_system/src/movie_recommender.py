@@ -209,8 +209,9 @@ def main():
                 try:
                     results = evaluate_recommender(train_rdd, validate_rdd, rank, iterations,
                                                    reg_param, log_fn, verbose, seed)
-                except e:
-                    log_outpt(log_fn, e)
+                except:
+                    log_outpt(log_fn, "raised an exception :(")
+                    raise Exception
 
                 # store results
                 MSE_results.append(results[0])
