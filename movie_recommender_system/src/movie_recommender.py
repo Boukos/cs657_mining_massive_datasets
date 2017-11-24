@@ -69,10 +69,11 @@ def convert_to_rating_rdd(rdd):
 
 def evaluate_recommender(train_set, test_set, rank, itr, reg_param,
                           log_fn, verbose=False, seed=12345):
+    train_set.cache()
+    test_set.cache()
     # logging statements
     if verbose: log_output(log_fn, "Building ALS Model\n")
-    if verbose: log_output(log_fn,
-                           "train_set:\n{}\n--".format(train_set.take(3)))
+    if verbose: log_output(log_fn,"train_set:\n{}\n-".format(train_set.take(3)))
     if verbose: log_output(log_fn, "test_set:\n{}\n--".format(test_set.take(3)))
 
     # Evalute the model on training data
@@ -82,11 +83,11 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param,
     # remove the ratings for the test set
     # returns [(ui, mi), ...]
     test_against = test_set.map(lambda x: (x[0], x[1]))
-    if verbose: log_output(log_fn, "Test Set:\n{}\n--".format(test_set.take(5)))
+    if verbose: log_output(log_fn, "Test Set:\n{}\n--".format(test_against.take(5)))
 
     # make predictions for test set from model
     # returns [((ui, mi), r_hati), ...]
-    predictions = rec_model.predictALL(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+    predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
     if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
