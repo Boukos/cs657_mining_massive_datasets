@@ -87,9 +87,6 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param,
 
     # make predictions for test set from model
     # returns [((ui, mi), r_hati), ...]
-    prediction = rec_model.predict(1,2)
-    if verbose: log_output(log_fn,"Prediction:\n{}\n--".format(prediction.first()))
-
     test_preds = [(1,2),(1,5),(2,1)]
     predictions = rec_model.predictAll(test_preds).map(lambda x: ((x[0], x[1]), x[2]))
     if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
@@ -145,7 +142,7 @@ def main():
     k_folds = 5
 
     # param lists
-    reg_param_list, ranks_list = [], []
+    reg_param_tracker, rank_tracker = [], []
 	
 	# metric lists
     MSE_results, RMSE_results, exp_vars, MAE_results = [], [], [], []
