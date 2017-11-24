@@ -1,0 +1,71 @@
+
+real	3m18.635s
+user	0m38.015s
+sys	0m5.428s
+-bash: /home/sarmstr5/cs657/movie_recommender_system/results/hdfs_stdout.txt: ambiguous redirect
+
+real	0m0.016s
+user	0m0.000s
+sys	0m0.002s
+-bash: /home/sarmstr5/cs657/movie_recommender_system/src/hdfs_stdout.txt: ambiguous redirect
+
+real	0m0.020s
+user	0m0.000s
+sys	0m0.002s
+-bash: hello.txt: ambiguous redirect
+
+real	0m0.056s
+user	0m0.000s
+sys	0m0.001s
+
+real	0m8.905s
+user	0m11.718s
+sys	0m1.644s
+
+real	3m3.419s
+user	0m37.893s
+sys	0m5.152s
+
+real	3m5.643s
+user	0m40.549s
+sys	0m5.595s
+
+real	3m6.084s
+user	0m38.680s
+sys	0m5.153s
+
+real	3m2.991s
+user	0m36.894s
+sys	0m5.099s
+
+real	3m1.070s
+user	0m38.446s
+sys	0m5.384s
+
+real	3m6.088s
+user	0m38.224s
+sys	0m5.439s
+
+real	5m4.242s
+user	0m58.705s
+sys	0m6.993s
+
+real	5m18.333s
+user	0m56.278s
+sys	0m7.430s
+
+real	0m3.039s
+user	0m2.951s
+sys	0m0.602s
+
+real	0m2.889s
+user	0m2.945s
+sys	0m0.592s
+
+real	0m2.780s
+user	0m2.948s
+sys	0m0.572s
+
+real	0m2.743s
+user	0m2.931s
+sys	0m0.536s
