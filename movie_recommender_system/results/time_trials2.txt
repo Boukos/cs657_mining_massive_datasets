@@ -133,3 +133,7 @@ sys	0m7.416s
 real	5m7.818s
 user	0m57.596s
 sys	0m7.092s
+
+real	0m2.916s
+user	0m2.937s
+sys	0m0.554s

@@ -88,10 +88,12 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param,
     # make predictions for test set from model
     # returns [((ui, mi), r_hati), ...]
     test_preds = [(1,2),(1,5),(2,1)]
-    predictions = rec_model.predictAll(test_preds).map(lambda x: ((x[0], x[1]), x[2]))
+    predictions = rec_model.predictAll(test_preds)
     if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
 
-    predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+    #predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+    predictions = rec_model.predictAll(test_against).
+    predictions = predictions.map(lambda x: ((x[0], x[1]), x[2]))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
     ratings_and_preds = test_set.map(lambda x: ((x[0], x[1]), x[2])).join(predictions)
