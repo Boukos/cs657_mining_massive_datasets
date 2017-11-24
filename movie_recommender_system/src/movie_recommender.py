@@ -83,15 +83,21 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param,
     # remove the ratings for the test set
     # returns [(ui, mi), ...]
     test_against = test_set.map(lambda x: (x[0], x[1]))
-    if verbose: log_output(log_fn, "Test Set:\n{}\n--".format(test_against.take(5)))
+    if verbose: log_output(log_fn, "Test Agst:\n{}\n--".format(test_against.take(5)))
 
     # make predictions for test set from model
     # returns [((ui, mi), r_hati), ...]
-    predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+    prediction = rec_model.predict(1,2)
+    if verbose: log_output(log_fn,"Prediction:\n{}\n--".format(prediction.first()))
+
+    test_preds = [(1,2),(1,5),(2,1)]
+    predictions = rec_model.predictAll(test_preds).map(lambda x: ((x[0], x[1]), x[2]))
     if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
 
+    predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
-    ratings_and_preds = test_set.map(lambda x: (x[0], x[1]), x[2]).join(predictions)
+    ratings_and_preds = test_set.map(lambda x: ((x[0], x[1]), x[2])).join(predictions)
     if verbose: log_output(log_fn,"Rates and Pred:\n{}\n--".format(ratings_and_preds.take(5)))
 
     # need to calculate y-yhat [(ri, r_hati), ...]
@@ -135,7 +141,7 @@ def main():
 
     # CV
     # dataset size is ~2E7
-    run_sample_pct = 1E-6
+    run_sample_pct = 1E-5
     k_folds = 5
 
     # param lists
