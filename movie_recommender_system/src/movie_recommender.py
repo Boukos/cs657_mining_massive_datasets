@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-#import findspark
-#findspark.init()
+# import findspark
+# findspark.init()
 
 # import spark stuff
 from pyspark import SparkContext
@@ -55,7 +55,7 @@ def get_evals(y_and_yhats):
 
 def cv_split(rdd, k_folds, test_k):
     # use mod and rand cv to filter train and validation sets
-	# if the row id mod k_folds equals the current validation fold add to validation fold
+    # if the row id mod k_folds equals the current validation fold add to validation fold
     train = rdd.filter(lambda x: x[0] % k_folds != test_k)
     test = rdd.filter(lambda x: x[0] % k_folds == test_k)
     return train, test
@@ -144,8 +144,8 @@ def main():
     # param lists
     reg_param_tracker, rank_tracker = [], []
 	
-	# metric lists
-    MSE_results, RMSE_results, exp_vars, MAE_results = [], [], [], []
+    # metric lists
+    MSE_results, RMSE_results, exp_vars_results, MAE_results = [], [], [], []
     MSE_avgs, RMSE_avgs, exp_var_avgs, MAE_avgs= [], [], [], []
     timings = []
 
@@ -254,7 +254,7 @@ def main():
     iters = create_static_var_gen(iterations, n_runs)
     cv_folds = create_static_var_gen(k_folds, n_runs)
     
-	
+
     if verbose: log_output(log_fn, "Saving training results to disk")
     # izip returns generator to save space 
     train_results_to_disk(fn, izip(run_size, RMSE_avgs, MSE_avgs, MAE_avgs,
@@ -279,9 +279,9 @@ def main():
     else: #use MAE
         min_param = min(MAE_avgs)
         zipped_results = izip(MAE_avgs, rank_tracker, reg_param_tracker)
-	
+
     if verbose: log_output(log_fn, "Finding best params")
-	# iterate through results and find the params with the min loss
+    # iterate through results and find the params with the min loss
     rank, reg_param = get_best_params(min_param, zipped_results)
 
     # delete param lists to save RAM
@@ -291,17 +291,17 @@ def main():
 
     # Now run tuned model vs test
     test_start = time.time()
-	
-	# not sure if mllib caches rdd in the background or not
+
+    # not sure if mllib caches rdd in the background or not
     train_set.unpersist()
 
     if verbose: log_output(log_fn, "Persisting datasets before final run")
     # convert to rating rdds
     train_set = convert_to_rating_rdd(train_set).cache()
     test_set = convert_to_rating_rdd(test_set).cache()
-	
+
     if verbose: log_output(log_fn, "About to run Test run")
-	# return test results
+    # return test results
     results = evaluate_recommender(train_set, test_set, rank, iterations, reg_param)
     MSE, RMSE, exp_var, MAE = results
     optimizations = create_static_var_gen(optmize_RMSE, n_runs)
