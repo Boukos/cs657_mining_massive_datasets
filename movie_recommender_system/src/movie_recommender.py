@@ -135,7 +135,7 @@ def main():
 
     # CV
     # dataset size is ~2E7
-    run_sample_pct = 1E-5
+    run_sample_pct = 1E-6
     k_folds = 5
 
     # param lists
@@ -173,7 +173,7 @@ def main():
     # from -> ["ui, mi, ri, timestamp", ..]
     # to -> [(rand_fold_i, Rating(u1, mi, ri)), ..]
     ratings = data.map(lambda row: row.split(",")) \
-                  .map(lambda x: (randint(1, k_folds), (int(x[0]),int(x[1]),float(x[2]))))
+                  .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
 
     #              .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
 
@@ -210,8 +210,9 @@ def main():
                     results = evaluate_recommender(train_rdd, validate_rdd, rank, iterations,
                                                    reg_param, log_fn, verbose, seed)
                 except:
-                    log_outpt(log_fn, "raised an exception :(")
-                    raise Exception
+                    e = sys.exc_info()[0]
+                    log_output(log_fn, e)
+                    raise
 
                 # store results
                 MSE_results.append(results[0])
