@@ -76,9 +76,10 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     if verbose: log_output(log_fn, "test_set:\n{}\n--".format(test_set.take(3)))
 
     # Evalute the model on training data
-    rec_model = ALS.train(train_set, rank=rank, seed=seed, iterations=itr, lambda_=reg_param)
+    rec_model = ALS.train(train_set)
+    # rec_model = ALS.train(train_set, rank=rank, seed=seed, iterations=itr, lambda_=reg_param)
     if verbose: log_output(log_fn, "ALS model:\n{}\n--".format(rec_model))
-    
+
     # remove the ratings for the test set
     # returns [(ui, mi), ...]
     test_against = test_set.map(lambda x: (x[0], x[1]))
@@ -86,15 +87,15 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
 
     # make predictions for test set from model
     # returns [((ui, mi), r_hati), ...]
-    test_preds = sc.parallelize[(1,2),(1,5),(2,1)]
-    predictions = rec_model.predictAll(test_preds)
-    if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
+    # test_preds = sc.parallelize([(1,2),(1,5),(2,1)])
+    # predictions = rec_model.predictAll(test_preds)
+    # if verbose: log_output(log_fn, "Predictions test:\n{}\n--".format(predictions.take(5)))
 
     #predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
     predictions = rec_model.predictAll(test_against)
-    if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
+    if verbose: log_output(log_fn, "Predictions1:\n{}\n--".format(predictions.take(5)))
     predictions = predictions.map(lambda x: ((x[0], x[1]), x[2]))
-    if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
+    if verbose: log_output(log_fn, "Predictions2:\n{}\n--".format(predictions.take(5)))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
     ratings_and_preds = test_set.map(lambda x: ((x[0], x[1]), x[2])).join(predictions)
