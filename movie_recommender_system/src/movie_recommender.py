@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # import findspark
 # findspark.init()
@@ -50,7 +50,7 @@ def create_static_var_gen(var, n_elements):
 def get_evals(y_and_yhats):
     metrics = RegressionMetrics(y_and_yhats)
     # MSE, RMSE, var, MAE
-    return (metrics.meanSquaredError, metrics.rootMeanSquaredError, \
+    return (metrics.meanSquaredError, metrics.rootMeanSquaredError,
             metrics.explainedVariance, metrics.meanAbsoluteError)
 
 def cv_split(rdd, k_folds, test_k):
@@ -67,8 +67,7 @@ def get_best_params(min_RMSE, zipped_results):
 def convert_to_rating_rdd(rdd):
     return rdd.map(lambda x: x[1])
 
-def evaluate_recommender(train_set, test_set, rank, itr, reg_param,
-                          log_fn, verbose=False, seed=12345):
+def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verbose=False, seed=12345):
     train_set.cache()
     test_set.cache()
     # logging statements
@@ -92,7 +91,7 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param,
     if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
 
     #predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
-    predictions = rec_model.predictAll(test_against).
+    predictions = rec_model.predictAll(test_against)
     predictions = predictions.map(lambda x: ((x[0], x[1]), x[2]))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
@@ -242,12 +241,12 @@ def main():
 
             # update timings
             timings.append(time.time() - cv_start)
-#--------------------------------End Grid Search-------------------------------------#
+##--------------------------------End Grid Search-------------------------------------#
     if verbose: log_output(log_fn, "Completed Grid search")
 
     # Finished Grid Search Cross Validation runs
     # save to disk
-    fn = os.path.join("..","results","training_results.csv")
+    fn = os.path.join("..", "results", "training_results.csv")
 
     # n length generators for static values
     # e.g. (5,5,5,5,5,...)
@@ -265,7 +264,7 @@ def main():
 
     if verbose: log_output(log_fn, "Deleting variables")
     # delete result lists to save RAM
-    del timings, MSE_avgs, MSE_results, RMSE_results, exp_vars_avgs
+    del timings, MSE_avgs, MSE_results, RMSE_results, exp_var_avgs
     del exp_vars_results, MAE_results
 
     # delete MAE or RMSE
@@ -306,12 +305,12 @@ def main():
     # return test results
     results = evaluate_recommender(train_set, test_set, rank, iterations, reg_param)
     MSE, RMSE, exp_var, MAE = results
-    optimizations = create_static_var_gen(optmize_RMSE, n_runs)
+    optimizations = create_static_var_gen(optimize_RMSE, n_runs)
 
     # save test results to local disk
     if verbose: log_output(log_fn, "Saving test results to disk")
     
-    fn = os.path.join("..","results", output_fn)
+    fn = os.path.join("..", "results", output_fn)
     test_results_to_disk(fn, (run_size, RMSE, MSE, MAE, exp_var, timings, rank,
                               reg_param, optimize_RMSE, time.time() - test_start,
                               time.time() - start_time))
