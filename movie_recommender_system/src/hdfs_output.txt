@@ -35,3 +35,6 @@ Start CV
 [(1854, 2116), (17321, 3711), (23417, 1946), (30642, 902), (31918, 296)]
 --"
 <type 'exceptions.AssertionError'>
+"this is the original data:
+[u'userId,movieId,rating,timestamp', u'1,2,3.5,1112486027', u'1,29,3.5,1112484676', u'1,32,3.5,1112484819', u'1,47,3.5,1112484727']
+--"
