@@ -19,14 +19,43 @@ import numpy as np
 import os, csv, sys, time
 from random import randint
 from itertools import izip, izip_longest
+from short_user_profile import short_review_list
+from long_user_profile import long_review_list
 
 def get_movie_names(fn, sc):
     movies_raw_rdd = sc.TextFile(fn)
     header = movies_raw_rdd.first()
     movies_raw_rdd = movies_raw_rdd.filter(lambda line: line != header)
-    # [ movieid, 'movie_name'
+    # [(movieid, 'movie_name')...]
     movies_rdd = movies_raw_rdd.map(lambda line: line.split(","))\
-                                .map(lambda x: (int(x[0]), x[1])).cache()
+                               .map(lambda x: (int(x[0]), x[1])).cache()
+
+def train_with_new_user(sc, full_reviews_rdd, rank, reg_param, seed=12345, itr=5, get_small_ratings=True):
+    if get_small_ratings:
+        new_user = short_review_list
+    else:
+        new_user = long_review_list
+    # [(user_id, movie_id, rating),...]
+    new_user_rdd = sc.parallelize(new_user).map(lambda x: (int(x[0]), int(x[1]), float(x[2])))
+    ratings_rdd = new_user_rdd.union(full_reviews_rdd)
+    updated_model = ALS.train(ratings_rdd, rank=rank, seed=seed, iterations=itr, lambda_=reg_param)
+    # list of movie ids that user has rated
+    movies_user_rated = map(lambda x: x[1], new_user)
+
+    # userid is 0
+    # [(0, movie_id), ...]
+    unrated_movies_rdd = ratings_rdd.filter(lambda x: x[0] not in movies_user_rated).map(lambda x: (0, x[0]))
+
+    # predict movie ratings
+    user_recommendations_rdd = updated_model.predictAll(unrated_movies_rdd)
+
+    # create key value pairs
+    recommendation_rdd = user_recommendations_rdd.map(lambda x: (x.product, x.rating))
+
+    top_movies = recommendation_rdd.takeOrdered(25, key=lambda x: x[1])
+    print(top_movies)
+    test_results_to_disk("top_movies", top_movies)
+
 
 
 def log_output(fn, statement):
@@ -97,7 +126,7 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     # predictions = rec_model.predictAll(test_preds)
     # if verbose: log_output(log_fn, "Predictions test:\n{}\n--".format(predictions.take(5)))
 
-    predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+    predictions = rec_model.predictAll(x_test).map(lambda x: ((x[0], x[1]), x[2]))
     if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
@@ -331,6 +360,8 @@ def main():
                               time.time() - start_time))
 
     if verbose: log_output(log_fn, "Completed run")
+
+    train_with_new_user(sc, ratings, rank, reg_param, seed=12345, itr=iterations, get_small_ratings=True)
 
 if __name__ == "__main__":
     main()
