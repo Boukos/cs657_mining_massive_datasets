@@ -4,3 +4,133 @@
 "Rates and Pred:
 [((108954, 480), (4.0, 3.603916154614969)), ((67094, 500), (3.0, 2.9425873354736494)), ((3157, 40815), (1.0, 3.404841733341989)), ((77418, 1206), (5.0, 2.873294006399836)), ((42579, 339), (4.0, 3.7210630788811336))]
 --"
+"this is the original data:
+[u'userId,movieId,rating,timestamp', u'1,2,3.5,1112486027', u'1,29,3.5,1112484676', u'1,32,3.5,1112484819', u'1,47,3.5,1112484727']
+--"
+"no header:
+[u'userId,movieId,rating,timestamp', u'1,2,3.5,1112486027', u'1,29,3.5,1112484676', u'1,32,3.5,1112484819', u'1,47,3.5,1112484727']
+--"
+"this is the data after sampling:
+[u'1,2,3.5,1112486027', u'1,29,3.5,1112484676', u'1,32,3.5,1112484819', u'1,47,3.5,1112484727', u'1,50,3.5,1112484580']
+--"
+"these are the ratings:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=50, rating=3.5)]
+--"
+"these are the training ratings:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=112, rating=3.5)]
+"
+Start CV
+"prerating:
+[(2, Rating(user=1, product=2, rating=3.5)), (4, Rating(user=1, product=32, rating=3.5)), (1, Rating(user=1, product=47, rating=3.5)), (3, Rating(user=1, product=112, rating=3.5)), (4, Rating(user=1, product=260, rating=4.0))]
+--"
+"postrating:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=112, rating=3.5), Rating(user=1, product=260, rating=4.0)]
+--"
+"Building ALS Model
+"
+"train_set:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5)]
+-"
+"test_set:
+[Rating(user=1, product=29, rating=3.5), Rating(user=1, product=223, rating=4.0), Rating(user=1, product=253, rating=4.0)]
+--"
+"ALS model:
+<pyspark.mllib.recommendation.MatrixFactorizationModel object at 0x2ac6246b8f50>
+--"
+"Test pairs:
+[(1, 29), (1, 223), (1, 253), (1, 367), (1, 1196)]
+--"
+<type 'exceptions.NameError'>
+"this is the original data:
+[u'userId,movieId,rating,timestamp', u'1,2,3.5,1112486027', u'1,29,3.5,1112484676', u'1,32,3.5,1112484819', u'1,47,3.5,1112484727']
+--"
+"no header:
+[u'userId,movieId,rating,timestamp', u'1,2,3.5,1112486027', u'1,29,3.5,1112484676', u'1,32,3.5,1112484819', u'1,47,3.5,1112484727']
+--"
+"this is the data after sampling:
+[u'1,2,3.5,1112486027', u'1,29,3.5,1112484676', u'1,32,3.5,1112484819', u'1,47,3.5,1112484727', u'1,50,3.5,1112484580']
+--"
+"these are the ratings:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=50, rating=3.5)]
+--"
+"these are the training ratings:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=112, rating=3.5)]
+"
+Start CV
+"prerating:
+[(2, Rating(user=1, product=2, rating=3.5)), (2, Rating(user=1, product=29, rating=3.5)), (1, Rating(user=1, product=32, rating=3.5)), (4, Rating(user=1, product=112, rating=3.5)), (2, Rating(user=1, product=223, rating=4.0))]
+--"
+"postrating:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=32, rating=3.5), Rating(user=1, product=112, rating=3.5), Rating(user=1, product=223, rating=4.0)]
+--"
+"Building ALS Model
+"
+"train_set:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=32, rating=3.5)]
+-"
+"test_set:
+[Rating(user=1, product=47, rating=3.5), Rating(user=1, product=293, rating=4.0), Rating(user=1, product=296, rating=4.0)]
+--"
+"ALS model:
+<pyspark.mllib.recommendation.MatrixFactorizationModel object at 0x2ac8fac20f50>
+--"
+"Test pairs:
+[(1, 47), (1, 293), (1, 296), (1, 653), (1, 1079)]
+--"
+"Predictions:
+[((65722, 1504), 2.8024033469214347), ((65722, 2590), 2.7014250466777563), ((65722, 4406), 2.9544847865096315), ((65722, 1252), 2.999895773526383), ((65722, 1952), 3.1202670066532483)]
+--"
+"Rates and Pred:
+[((126177, 8501), (3.0, 3.627349756676811)), ((69435, 3617), (4.5, 3.5055376609188507)), ((28705, 51255), (3.5, 4.443638859196092)), ((126662, 1222), (5.0, 3.7156073459723213)), ((25648, 648), (4.0, 4.2119235476052985))]
+--"
+Start CV
+"prerating:
+[(2, Rating(user=1, product=2, rating=3.5)), (2, Rating(user=1, product=29, rating=3.5)), (5, Rating(user=1, product=47, rating=3.5)), (4, Rating(user=1, product=112, rating=3.5)), (2, Rating(user=1, product=223, rating=4.0))]
+--"
+"postrating:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=112, rating=3.5), Rating(user=1, product=223, rating=4.0)]
+--"
+"Building ALS Model
+"
+"train_set:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=47, rating=3.5)]
+-"
+"test_set:
+[Rating(user=1, product=32, rating=3.5), Rating(user=1, product=318, rating=4.0), Rating(user=1, product=1201, rating=3.0)]
+--"
+"ALS model:
+<pyspark.mllib.recommendation.MatrixFactorizationModel object at 0x2ac909652ad0>
+--"
+"Test pairs:
+[(1, 32), (1, 318), (1, 1201), (1, 1219), (1, 1278)]
+--"
+"Predictions:
+[((65722, 3148), 2.3721669191491017), ((65722, 3994), 1.9932200603532726), ((65722, 1266), 2.5024107415068215), ((65722, 1094), 2.558765372937895), ((65722, 308), 2.5431250754235464)]
+--"
+"Rates and Pred:
+[((65352, 2872), (5.0, 3.726821010745205)), ((40496, 2762), (5.0, 3.8399803082580917)), ((59029, 313), (1.5, 2.4763253275531207)), ((128761, 329), (4.0, 3.2651777438156824)), ((91141, 1617), (5.0, 3.665255004061403))]
+--"
+Start CV
+"prerating:
+[(1, Rating(user=1, product=32, rating=3.5)), (5, Rating(user=1, product=47, rating=3.5)), (4, Rating(user=1, product=112, rating=3.5)), (3, Rating(user=1, product=253, rating=4.0)), (4, Rating(user=1, product=260, rating=4.0))]
+--"
+"postrating:
+[Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=112, rating=3.5), Rating(user=1, product=253, rating=4.0), Rating(user=1, product=260, rating=4.0)]
+--"
+"Building ALS Model
+"
+"train_set:
+[Rating(user=1, product=32, rating=3.5), Rating(user=1, product=47, rating=3.5), Rating(user=1, product=112, rating=3.5)]
+-"
+"test_set:
+[Rating(user=1, product=2, rating=3.5), Rating(user=1, product=29, rating=3.5), Rating(user=1, product=223, rating=4.0)]
+--"
+"ALS model:
+<pyspark.mllib.recommendation.MatrixFactorizationModel object at 0x2ac909641d10>
+--"
+"Test pairs:
+[(1, 2), (1, 29), (1, 223), (1, 367), (1, 1090)]
+--"
+"Predictions:
+[((65722, 3304), 3.1780534860847602), ((65722, 3090), 3.058269026734312), ((65722, 1572), 3.6089049458230225), ((65722, 326), 3.03176310115264), ((65722, 892), 2.159883443739016)]
+--"

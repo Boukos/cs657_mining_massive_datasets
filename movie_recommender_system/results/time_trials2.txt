@@ -169,3 +169,11 @@ sys	0m8.162s
 real	50m4.994s
 user	6m19.763s
 sys	0m25.929s
+
+real	0m6.509s
+user	0m3.513s
+sys	0m0.835s
+
+real	22m56.015s
+user	2m57.921s
+sys	0m15.069s

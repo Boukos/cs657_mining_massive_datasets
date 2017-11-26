@@ -97,7 +97,7 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     # predictions = rec_model.predictAll(test_preds)
     # if verbose: log_output(log_fn, "Predictions test:\n{}\n--".format(predictions.take(5)))
 
-    predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+    predictions = rec_model.predictAll(x_test).map(lambda x: ((x[0], x[1]), x[2]))
     if verbose: log_output(log_fn, "Predictions:\n{}\n--".format(predictions.take(5)))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
@@ -130,7 +130,7 @@ def main():
         print("\n________------------________\n")
         print(input_file_path)
 
-    movies_rdd = get_movie_names(movies_file_path)
+    #movies_rdd = get_movie_names(movies_file_path)
     # Optimization params
     # since we have ratings our feedback is explicit, 
     # therefore ignoring the implicit parameters
@@ -142,7 +142,7 @@ def main():
     optimize_RMSE = True
 
     # log status
-    verbose = True
+    verbose = False
     log_fn = "hdfs_output.txt"
 
     # CV
