@@ -76,7 +76,7 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     if verbose: log_output(log_fn, "test_set:\n{}\n--".format(test_set.take(3)))
 
     # Evalute the model on training data
-    rec_model = ALS.train(train_set)
+    rec_model = ALS.train(train_set, rank = 10)
     # rec_model = ALS.train(train_set, rank=rank, seed=seed, iterations=itr, lambda_=reg_param)
     if verbose: log_output(log_fn, "ALS model:\n{}\n--".format(rec_model))
 
@@ -91,10 +91,10 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     # predictions = rec_model.predictAll(test_preds)
     # if verbose: log_output(log_fn, "Predictions test:\n{}\n--".format(predictions.take(5)))
 
-    #predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
-    predictions = rec_model.predictAll(test_against)
-    if verbose: log_output(log_fn, "Predictions1:\n{}\n--".format(predictions.take(5)))
-    predictions = predictions.map(lambda x: ((x[0], x[1]), x[2]))
+    predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
+    #predictions = rec_model.predictAll(test_against)
+    #if verbose: log_output(log_fn, "Predictions1:\n{}\n--".format(predictions.take(5)))
+    #predictions = predictions.map(lambda x: ((x[0], x[1]), x[2]))
     if verbose: log_output(log_fn, "Predictions2:\n{}\n--".format(predictions.take(5)))
 
     # combine on key value pairs of [((ui, mi), (ri, ri_hat)), ...]
@@ -142,7 +142,8 @@ def main():
 
     # CV
     # dataset size is ~2E7
-    run_sample_pct = 1E-5
+    get_sample = False
+    run_sample_pct = 1E-1
     k_folds = 5
 
     # param lists
@@ -164,12 +165,13 @@ def main():
 
     # take out header
     header = all_data.first()
-    all_data = all_data.filter(lambda x: x != header)
+    data = all_data.filter(lambda x: x != header)
 
     if verbose: log_output(log_fn, "no header:\n{}\n--".format(all_data.take(5)))
 
     # take sample of dataset
-    data = all_data.sample(withReplacement=False, fraction=run_sample_pct,
+    if get_sample:
+        data = data.sample(withReplacement=False, fraction=run_sample_pct,
                            seed=seed).cache()
 
     if verbose: log_output(log_fn, "this is the data after sampling:\n{}\n--".format(data.take(5)))
@@ -191,8 +193,6 @@ def main():
 
     if verbose: log_output(log_fn, "these are the training ratings:\n{}\n".format(train_set.take(5)))
 
-    # run cross validation on linear regression model
-    # SGD step (alpha), batch percent
 #--------------------------------Start Grid Search-------------------------------------#
     for rank in ranks:
         for reg_param in reg_params:
