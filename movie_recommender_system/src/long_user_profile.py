@@ -1,4 +1,4 @@
-my_reviews = [
+long_review_list = [
  (0, 1732, 4), #"Big Lebowski"
  (0, 2571, 5), #"The Matrix"
  (0, 48516, 5), #"The Departed"
