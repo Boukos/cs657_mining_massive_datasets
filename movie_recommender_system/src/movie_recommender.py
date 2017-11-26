@@ -16,12 +16,17 @@ from pyspark.mllib.recommendation import ALS, MatrixFactorizationModel, Rating
 
 # import python stuff
 import numpy as np
-import os
-import csv
-import sys
+import os, csv, sys, time
 from random import randint
 from itertools import izip, izip_longest
-import time
+
+def get_movie_names(fn, sc):
+    movies_raw_rdd = sc.TextFile(fn)
+    header = movies_raw_rdd.first()
+    movies_raw_rdd = movies_raw_rdd.filter(lambda line: line != header)
+    # [ movieid, 'movie_name'
+    movies_rdd = movies_raw_rdd.map(lambda line: line.split(","))\
+                                .map(lambda x: (int(x[0]), x[1])).cache()
 
 
 def log_output(fn, statement):
@@ -76,14 +81,16 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     if verbose: log_output(log_fn, "test_set:\n{}\n--".format(test_set.take(3)))
 
     # Evalute the model on training data
-    rec_model = ALS.train(train_set)
+    # ratings - RDD of Ratings or (userid, productID, rating) tuples
+    # rank - Number of features to use (also referred to as the number of latent factors)
+    rec_model = ALS.train(ratings=train_set, rank=10)
     # rec_model = ALS.train(train_set, rank=rank, seed=seed, iterations=itr, lambda_=reg_param)
     if verbose: log_output(log_fn, "ALS model:\n{}\n--".format(rec_model))
 
     # remove the ratings for the test set
-    # returns [(ui, mi), ...]
-    test_against = test_set.map(lambda x: (x[0], x[1]))
-    if verbose: log_output(log_fn, "Test Agst:\n{}\n--".format(test_against.take(5)))
+    # x_test = [(user_id, movie_id), ...]
+    x_test = test_set.map(lambda x: (x[0], x[1]))
+    if verbose: log_output(log_fn, "Test pairs:\n{}\n--".format(x_test.take(5)))
 
     # make predictions for test set from model
     # returns [((ui, mi), r_hati), ...]
@@ -92,7 +99,7 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     # if verbose: log_output(log_fn, "Predictions test:\n{}\n--".format(predictions.take(5)))
 
     #predictions = rec_model.predictAll(test_against).map(lambda x: ((x[0], x[1]), x[2]))
-    predictions = rec_model.predictAll(test_against)
+    predictions = rec_model.predictAll(x_test)
     if verbose: log_output(log_fn, "Predictions1:\n{}\n--".format(predictions.take(5)))
     predictions = predictions.map(lambda x: ((x[0], x[1]), x[2]))
     if verbose: log_output(log_fn, "Predictions2:\n{}\n--".format(predictions.take(5)))
@@ -114,6 +121,7 @@ def main():
         input_dir = "data"
         input_fn = "ratings.csv"
         input_file_path = os.path.join(input_dir, input_fn)
+        movies_file_path = os.path.join(input_dir, "movies.csv")
         output_fn="original_test.csv"
 
     # filenames given, assuming in hydra
@@ -126,6 +134,7 @@ def main():
         print("\n________------------________\n")
         print(input_file_path)
 
+    movies_rdd = get_movie_names(movies_file_path)
     # Optimization params
     # since we have ratings our feedback is explicit, 
     # therefore ignoring the implicit parameters
@@ -179,15 +188,20 @@ def main():
     # And add a random fold assignment for CV
     # from -> ["ui, mi, ri, timestamp", ..]
     # to -> [(rand_fold_i, Rating(u1, mi, ri)), ..]
-    ratings = data.map(lambda row: row.split(",")) \
-                  .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
+    # ratings = data.map(lambda row: row.split(",")) \
+    #               .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
 
+    ratings = data.map(lambda row: row.split(",")) \
+                  .map(lambda x: Rating(int(x[0]),int(x[1]),float(x[2])))
     #              .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
 
     if verbose: log_output(log_fn, "these are the ratings:\n{}\n--".format(ratings.take(5)))
 
     train_set, test_set = ratings.randomSplit([0.8, 0.2], seed=seed)
-    train_set.cache()
+
+    # assign random partition to each rdd element for cross validation testing
+    cv_rdd = train_set.map(lambda x: (randint(1, k_folds), x))
+    cv_rdd.cache()
 
     if verbose: log_output(log_fn, "these are the training ratings:\n{}\n".format(train_set.take(5)))
 
@@ -202,7 +216,7 @@ def main():
                 #-------------------Start of CV--------------------------#
                 if verbose: log_output(log_fn, "Start CV")
                 # create CV sets
-                train_rdd, validate_rdd = cv_split(train_set, k_folds, k)
+                train_rdd, validate_rdd = cv_split(cv_rdd, k_folds, k)
                 if verbose: log_output(log_fn, "prerating:\n{}\n--".format(train_rdd.take(5)))
                 
                 # remove random cv assignment
@@ -246,6 +260,10 @@ def main():
             timings.append(time.time() - cv_start)
 ##--------------------------------End Grid Search-------------------------------------#
     if verbose: log_output(log_fn, "Completed Grid search")
+
+    # not sure if mllib caches rdd in the background or not
+    cv_rdd.unpersist()
+
 
     # Finished Grid Search Cross Validation runs
     # save to disk
@@ -296,13 +314,11 @@ def main():
     # Now run tuned model vs test
     test_start = time.time()
 
-    # not sure if mllib caches rdd in the background or not
-    train_set.unpersist()
 
     if verbose: log_output(log_fn, "Persisting datasets before final run")
-    # convert to rating rdds
-    train_set = convert_to_rating_rdd(train_set).cache()
-    test_set = convert_to_rating_rdd(test_set).cache()
+    # not sure of mllib caches datasets
+    train_set.cache()
+    test_set.cache()
 
     if verbose: log_output(log_fn, "About to run Test run")
     # return test results
