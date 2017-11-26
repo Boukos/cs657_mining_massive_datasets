@@ -1,0 +1,50 @@
+class Main()
+	Initialize optimization parameters and lists
+	Read in data file
+	
+	# RDD = [(‘userid,movieid,rating,timestamp’),…]
+	Convert data file to RDD
+	
+	# Processed_RDD = [Rating(userid, movieid, rating),…]
+	For each row in RDD
+		Processed_RDD = Process_Data(row)
+				
+	Randomly split Processed_RDD into Train and Test RDDs
+
+	# CV_RDD = [(~U[1,k], Rating(userid, movieid, rating)),…]	
+	For each row in Train RDD
+		Create uniform random number from 1 to k number of cross validation folds 
+		Transform row to key value pair where key is ~U[1, k] and value is Rating_i 
+		
+	Run Grid Search over parameter lists
+		Set model parameters
+		Run Cross Validation on CV_RDD
+			Split CV_RDD into k-1 training folds and 1 validation fold
+			Combine training folds into cross validation training set
+			Initialize model with grid search parameters
+			Train model on cross validation training set
+			Calculate evaluation metrics of model on the validation fold
+			Store cross validation evaluation metrics and model parameters
+		Calculate average evaluation metrics across folds
+		Store evaluation averages
+		
+	Find the optimal training model with the min average loss
+	Set model params to optimal cross validation model
+	Train optimal model on Train RDD
+	Evaluate optimal model on Test RDD
+	Save results to disk
+	
+method Get_Features(row):
+	# RDD = [(‘userid’, ‘movieid’, ‘rating’, ‘timestamp’),…]
+	Split each value delineated by commas
+	
+	# RDD = [(‘userid’, ‘movieid’, ‘rating’),…]
+	Remove Time stamp from RDD
+	
+	# RDD = [(userid, movieid, rating),…]
+	Convert the user_id and movie_id to ints and the rating to a float
+	
+	# RDD = [Rating(userid, movieid, rating),…]
+	Convert the values to a Rating object
+	
+	Return Rating RDD
