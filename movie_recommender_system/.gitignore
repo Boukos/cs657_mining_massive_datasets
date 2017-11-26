@@ -6,3 +6,4 @@ metastore_db/*
 derby.log
 results/*.csv
 *metastore_db
+*.zip
