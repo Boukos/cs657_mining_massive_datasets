@@ -5,15 +5,19 @@ The parameters that are searched on are:
 	- lambda, the regularization parameter in ALS
 
 Steps to run program
- - Download files from the MovieLens website http://files.grouplens.org/datasets/movielens/ml-latest.zip
- - Unzip and put files in data folder
+ - run get_data.sh, or
+	- Download files from the MovieLens website http://files.grouplens.org/datasets/movielens/ml-latest.zip
+	- Unzip and put files in data folder
  - Run . single_recommender_run.sh 
 
 Folder structure:
 Pseudo_code - holds project pseudo code
 report - contains powerpoint with project description, pseudo code, and conclusions
 results - training cross validaiton and test results
-src - python code and scripts to run linear regression
-src/not_used/ - miscellanous code that was not used for project
+src - python code and scripts to run recommendation
+	- long_user_profile.py - list of ~ 70 reviews user movie reviews, whose user id is 0 [(user_id, movie_id, rating), ...] 
+	- short_user_profile - list of ~ 30 reviews user movie reviews, whose user id is 0 [(user_id, movie_id, rating), ...]
+	- movie_recommender.py - python script to create movie recommender system with cross validation and testing.  Also provides user recommended movies
+	- merge_movies.py - gets movie names from movie ids
 test_input - small training sets to test code # not included for submission
 data - full data set # not included for submission
