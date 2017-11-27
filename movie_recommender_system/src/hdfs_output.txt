@@ -675,3 +675,6 @@ Start CV
 "Test pairs:
 [(1, 2), (1, 29), (1, 223), (1, 367), (1, 1090)]
 --"
+<class 'py4j.protocol.Py4JError'>
+<class 'py4j.protocol.Py4JJavaError'>
+<class 'py4j.protocol.Py4JJavaError'>
