@@ -6,19 +6,16 @@
 # import spark stuff
 from pyspark import SparkContext
 from pyspark import SparkConf
-from pyspark.sql import Row
 
 #import mllib
 from pyspark.mllib.evaluation import RegressionMetrics
-from pyspark.mllib.regression import LabeledPoint, LinearRegressionWithSGD, LinearRegressionModel
 from pyspark.mllib.recommendation import ALS, MatrixFactorizationModel, Rating
-#from pyspark.mllib.feature import StandardScalar, StandardScalerModel
 
 # import python stuff
 import numpy as np
 import os, csv, sys, time
 from random import randint
-from itertools import izip, izip_longest
+from itertools import izip
 from short_user_profile import short_review_list
 from long_user_profile import long_review_list
 
@@ -55,8 +52,6 @@ def train_with_new_user(sc, full_reviews_rdd, rank, reg_param, seed=12345, itr=5
     top_movies = recommendation_rdd.takeOrdered(25, key=lambda x: x[1])
     print(top_movies)
     test_results_to_disk("top_movies", top_movies)
-
-
 
 def log_output(fn, statement):
     with open(fn, 'a') as log:
@@ -136,103 +131,15 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
     # need to calculate y-yhat [(ri, r_hati), ...]
     return get_evals(ratings_and_preds.map(lambda x: x[1]))
 
-def main():
-    start_time = time.time()
-    # input parameters
-    # filenames not given use default
-    if len(sys.argv) < 3:
-        # assuming hydra hdfs with test_input directory
-        print("you didnt give directory inputs, using test file")
-        input_dir = "data"
-        input_fn = "ratings.csv"
-        input_file_path = os.path.join(input_dir, input_fn)
-        movies_file_path = os.path.join(input_dir, "movies.csv")
-        output_fn="original_test.csv"
-
-    # filenames given, assuming in hydra
-    else:
-        # expecting full filepath from bash
-        input_fn = sys.argv[1]
-        output_fn = sys.argv[2]
-        input_dir = "data"
-        input_file_path = os.path.join(input_dir, input_fn+".csv")
-        print("\n________------------________\n")
-        print(input_file_path)
-
-    #movies_rdd = get_movie_names(movies_file_path)
-    # Optimization params
-    # since we have ratings our feedback is explicit, 
-    # therefore ignoring the implicit parameters
-    ranks = [x for x in range(5, 20, 5)]
-    reg_params = [x / float(1000) for x in range(1, 600, 100)]
-    iterations = 5
-    seed = 12345
-    # choose model based on lowest RMSE or MAE
-    optimize_RMSE = True
-
-    # log status
-    verbose = False
-    log_fn = "hdfs_output.txt"
-
-    # CV
-    # dataset size is ~2E7
-    get_sample = False
-    run_sample_pct = 1E-1
-    k_folds = 5
-
+def grid_search(cv_rdd, k_folds, ranks, reg_params, iterations, num_of_rows, log_fn, verbose, seed, optimize_RMSE ):
+    cv_rdd.cache()
     # param lists
     reg_param_tracker, rank_tracker = [], []
-	
     # metric lists
     MSE_results, RMSE_results, exp_vars_results, MAE_results = [], [], [], []
     MSE_avgs, RMSE_avgs, exp_var_avgs, MAE_avgs= [], [], [], []
     timings = []
 
-    # initialize spark
-    conf = SparkConf().setMaster("local").setAppName("linear_regression.py")
-    sc = SparkContext(conf = conf)
-
-    # read in data
-    all_data = sc.textFile(input_file_path)
-    if verbose: log_output(log_fn, "this is the original data:\n{}\n--".format(all_data.take(5)))
-    dataset_size = all_data.count() - 1
-
-    # take out header
-    header = all_data.first()
-    data = all_data.filter(lambda x: x != header)
-
-    if verbose: log_output(log_fn, "no header:\n{}\n--".format(all_data.take(5)))
-
-    # take sample of dataset
-    if get_sample:
-        data = data.sample(withReplacement=False, fraction=run_sample_pct,
-                           seed=seed).cache()
-
-    if verbose: log_output(log_fn, "this is the data after sampling:\n{}\n--".format(data.take(5)))
-
-
-    # Need to convert list of strings to mllib.Ratings
-    # And add a random fold assignment for CV
-    # from -> ["ui, mi, ri, timestamp", ..]
-    # to -> [(rand_fold_i, Rating(u1, mi, ri)), ..]
-    # ratings = data.map(lambda row: row.split(",")) \
-    #               .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
-
-    ratings = data.map(lambda row: row.split(",")) \
-                  .map(lambda x: Rating(int(x[0]),int(x[1]),float(x[2])))
-    #              .map(lambda x: (randint(1, k_folds), Rating(int(x[0]),int(x[1]),float(x[2]))))
-
-    if verbose: log_output(log_fn, "these are the ratings:\n{}\n--".format(ratings.take(5)))
-
-    train_set, test_set = ratings.randomSplit([0.8, 0.2], seed=seed)
-
-    # assign random partition to each rdd element for cross validation testing
-    cv_rdd = train_set.map(lambda x: (randint(1, k_folds), x))
-    cv_rdd.cache()
-
-    if verbose: log_output(log_fn, "these are the training ratings:\n{}\n".format(train_set.take(5)))
-
-#--------------------------------Start Grid Search-------------------------------------#
     for rank in ranks:
         for reg_param in reg_params:
             # Build model
@@ -243,7 +150,7 @@ def main():
                 # create CV sets
                 train_rdd, validate_rdd = cv_split(cv_rdd, k_folds, k)
                 if verbose: log_output(log_fn, "prerating:\n{}\n--".format(train_rdd.take(5)))
-                
+
                 # remove random cv assignment
                 # from -> [(rand_fold_i, Rating(u1, mi, ri)), ..]
                 # to -> [(u1, mi, ri)), ..]
@@ -283,12 +190,12 @@ def main():
 
             # update timings
             timings.append(time.time() - cv_start)
-##--------------------------------End Grid Search-------------------------------------#
+
+
     if verbose: log_output(log_fn, "Completed Grid search")
 
     # not sure if mllib caches rdd in the background or not
     cv_rdd.unpersist()
-
 
     # Finished Grid Search Cross Validation runs
     # save to disk
@@ -297,15 +204,15 @@ def main():
     # n length generators for static values
     # e.g. (5,5,5,5,5,...)
     n_runs = len(rank_tracker)
-    run_size = create_static_var_gen(run_sample_pct * dataset_size, n_runs)
+    run_size = create_static_var_gen(num_of_rows, n_runs)
     iters = create_static_var_gen(iterations, n_runs)
     cv_folds = create_static_var_gen(k_folds, n_runs)
-    
+
 
     if verbose: log_output(log_fn, "Saving training results to disk")
-    # izip returns generator to save space 
+    # izip returns generator to save space
     train_results_to_disk(fn, izip(run_size, RMSE_avgs, MSE_avgs, MAE_avgs,
-                                   exp_var_avgs, timings, rank_tracker, 
+                                   exp_var_avgs, timings, rank_tracker,
                                    reg_param_tracker, iters, cv_folds))
 
     if verbose: log_output(log_fn, "Deleting variables")
@@ -314,7 +221,7 @@ def main():
     del exp_vars_results, MAE_results
 
     # delete MAE or RMSE
-    if optimize_RMSE: del MAE_avgs 
+    if optimize_RMSE: del MAE_avgs
     else: del RMSE_avgs
 
     # next find best params
@@ -331,37 +238,140 @@ def main():
     # iterate through results and find the params with the min loss
     rank, reg_param = get_best_params(min_param, zipped_results)
 
-    # delete param lists to save RAM
-    del rank_tracker, reg_param_tracker
-    if optimize_RMSE: del MAE_avgs 
-    else: del RMSE_avgs
+    return rank, reg_param
 
-    # Now run tuned model vs test
-    test_start = time.time()
+def get_inputs():
+    # input parameters
+    # filenames not given use default
+    if len(sys.argv) < 3:
+        # assuming hydra hdfs with test_input directory
+        print("you didnt give directory inputs, using test file")
+        input_dir = "data"
+        input_fn = "ratings.csv"
+        main_dir = os.path.dirname(os.path.abspath(os.curdir))
+        input_file_path = os.path.join(main_dir, input_dir, input_fn)
+        # input_file_path = os.path.join(input_dir, input_fn) #hdfs path
+        print(input_file_path)
+        output_fn="original_test.csv"
+        movies_file_path = os.path.join(main_dir, input_dir, "movies.csv")
+
+    # filenames given, assuming in hydra
+    else:
+        # expecting full filepath from bash
+        input_fn = sys.argv[1]
+        output_fn = sys.argv[2]
+        input_dir = "data"
+        input_file_path = os.path.join(input_dir, input_fn+".csv")
+        print("\n________------------________\n")
+        print(input_file_path)
+        movies_file_path = os.path.join(input_dir, "movies.csv")
+
+    return input_file_path, movies_file_path, output_fn
+
+def get_ratings_rdd(all_data, get_sample, run_sample_pct, log_fn, verbose, seed=12345):
+    # take out header
+    header = all_data.first()
+    data = all_data.filter(lambda x: x != header)
+
+    if verbose: log_output(log_fn, "no header:\n{}\n--".format(all_data.take(5)))
+
+    # take sample of dataset
+    if get_sample:
+        data = data.sample(withReplacement=False, fraction=run_sample_pct,
+                           seed=seed).cache()
+
+    if verbose: log_output(log_fn, "this is the data after sampling:\n{}\n--".format(data.take(5)))
 
 
-    if verbose: log_output(log_fn, "Persisting datasets before final run")
-    # not sure of mllib caches datasets
-    train_set.cache()
-    test_set.cache()
+    # Need to convert list of strings to mllib.Ratings
+    # And add a random fold assignment for CV
+    # from -> ["ui, mi, ri, timestamp", ..]
+    # to -> [(rand_fold_i, Rating(u1, mi, ri)), ..]
+    ratings = data.map(lambda row: row.split(",")) \
+        .map(lambda x: Rating(int(x[0]),int(x[1]),float(x[2])))
 
-    if verbose: log_output(log_fn, "About to run Test run")
-    # return test results
-    results = evaluate_recommender(train_set, test_set, rank, iterations, reg_param)
-    MSE, RMSE, exp_var, MAE = results
-    optimizations = create_static_var_gen(optimize_RMSE, n_runs)
+    if verbose: log_output(log_fn, "these are the ratings:\n{}\n--".format(ratings.take(5)))
+    return ratings
 
-    # save test results to local disk
-    if verbose: log_output(log_fn, "Saving test results to disk")
-    
-    fn = os.path.join("..", "results", output_fn)
-    test_results_to_disk(fn, (run_size, RMSE, MSE, MAE, exp_var, timings, rank,
-                              reg_param, optimize_RMSE, time.time() - test_start,
-                              time.time() - start_time))
 
-    if verbose: log_output(log_fn, "Completed run")
+def main():
+    start_time = time.time()
 
-    train_with_new_user(sc, ratings, rank, reg_param, seed=12345, itr=iterations, get_small_ratings=True)
+    # initialize spark
+    conf = SparkConf().setMaster("local").setAppName("recommender.py")
+    sc = SparkContext(conf = conf)
+
+    # log status
+    verbose = False
+    log_fn = "hdfs_output.txt"
+
+    # program parameters
+    get_sample = False
+    run_grid_search = False
+    run_test_eval = False
+    train_new_user = True
+
+    # dataset size is ~2E7
+    run_sample_pct = 1E-1
+    k_folds = 5
+    seed = 12345
+    iterations = 5
+    rank = 10
+    reg_param = 0.05
+
+    input_file_path, movies_file_path, output_fn = get_inputs()
+
+    # read in data
+    all_data = sc.textFile(input_file_path)
+    if verbose: log_output(log_fn, "this is the original data:\n{}\n--".format(all_data.take(5)))
+    dataset_size = all_data.count() - 1
+
+    ratings = get_ratings_rdd(all_data, get_sample, run_sample_pct, log_fn, verbose, seed)
+    #movies_rdd = get_movie_names(movies_file_path)
+
+    # this is a transformation so only acts if grid search or run test eval is run
+    train_set, test_set = ratings.randomSplit([0.8, 0.2], seed=seed)
+
+    if run_grid_search:
+        reg_params = [x / float(1000) for x in range(1, 600, 100)]
+        ranks = [x for x in range(5, 20, 5)]
+        iterations = 5
+        seed = 12345
+        # choose model based on lowest RMSE or MAE
+        optimize_RMSE = True
+        num_of_rows = run_sample_pct * dataset_size
+        # assign random partition to each rdd element for cross validation testing
+        cv_rdd = train_set.map(lambda x: (randint(1, k_folds), x))
+        rank, reg_param = grid_search(cv_rdd, k_folds, ranks, reg_params, iterations, num_of_rows,
+                                      log_fn, verbose, seed, optimize_RMSE)
+    if run_test_eval:
+        # Now run tuned model vs test
+        test_start = time.time()
+
+        if verbose: log_output(log_fn, "Persisting datasets before final run")
+        # not sure of mllib caches datasets
+        train_set.cache()
+        test_set.cache()
+
+        if verbose: log_output(log_fn, "About to run Test run")
+
+        # return test results
+        results = evaluate_recommender(train_set, test_set, rank, iterations, reg_param)
+        MSE, RMSE, exp_var, MAE = results
+
+        if verbose: log_output(log_fn, "Saving test results to disk")
+
+        # save test results to local disk
+        fn = os.path.join("..", "results", output_fn)
+        test_results_to_disk(fn, (RMSE, MSE, MAE, exp_var, rank,
+                                  reg_param, iterations,
+                                  time.time() - test_start,
+                                  time.time() - start_time))
+
+        if verbose: log_output(log_fn, "Completed run")
+
+    if train_new_user:
+        train_with_new_user(sc, ratings, rank, reg_param, seed=12345, itr=iterations, get_small_ratings=True)
 
 if __name__ == "__main__":
     main()
