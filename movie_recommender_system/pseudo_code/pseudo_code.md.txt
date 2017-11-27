@@ -29,12 +29,13 @@ class Main()
 		Store evaluation averages
 		
 	Find the optimal training model with the min average loss
-	Set model params to optimal cross validation model
+	Set model paramaters to optimal cross validation model
 	Train optimal model on Train RDD
 	Evaluate optimal model on Test RDD
 	Save results to disk
+	new_user_top_k_ratings = Train_New_User(optimal_model_parameters, Processed_RDD, new_user_ratings)
 	
-method Get_Features(row):
+Method Get_Features(row):
 	# RDD = [(‘userid’, ‘movieid’, ‘rating’, ‘timestamp’),…]
 	Split each value delineated by commas
 	
@@ -48,3 +49,13 @@ method Get_Features(row):
 	Convert the values to a Rating object
 	
 	Return Rating RDD
+
+Method Train_New_User(model_parameters, Processed_RDD, new_user_ratings)
+	Join Processed_RDD and new_user_ratings
+	Initialize model with model_parameters
+	Train model on Processed_RDD
+	For all movies the new user has not reviewed
+		Predict rating scores
+	Sort predicted rating scores
+	return top k ratings from sorted predicted ratings
+	

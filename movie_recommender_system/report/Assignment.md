@@ -1,8 +1,3 @@
-﻿Do this assignment in SPARK
-• Prepare the data: There are 10 attributes plus the target -trip_duration- (read the description). See if any should be eliminated or transformed. (Use your judgement.)
-• Use regresion to train a model that can predict the duration. Do this in the following ways:
-	◦ Using a version of regression that optimizes the parameters with Gradient Descent. 
-	◦ Using a version of regression that optimizes the parameters with Stochastic Gradient Descent
-	◦ Produce a graph of time to train vs. size of the training set to compare both methods
-	◦ Add regularization to the model. Try L1 and L2. Compare the results with the previous, unregularized models. 
-• For  all the models  you produce above, use a percentage of the training set (80%) to crossvalidate your model (10 folds). Use the rest of the data (20%) as test set. Output the root mean squared error and the mean absolute error. (You cannot use the test data in Kaggle because you do not know the labels.) 
+� Using Spark, design and implement a Recommender System to predict ratings of movies. Base your utility matrix on the Movie Lens 20M dataset. Use the Products of Factors technique for your system and optimize the loss function with ALS. You are free to add techniques and features to your system. You are also free to use other optimization techniques. To evaluate your solution, you can use the shell script provided in MovieLens to generate 5-folds and utilize them to cross-validate your solution. Alternatively, you can use the utilities in Spark to generate the folds. Compute RMSE, MSE, and MAP. (Hint: you can use MLlib's RegressionMetrics and RankingMetrics to do this easily in Spark). 
+� Add one user to the database (yourself), by adding recommendations to a few (20~25) movies. Then use the recommendation system you built to output the predicted ranking for 5 movies you did not evaluate. 
+
