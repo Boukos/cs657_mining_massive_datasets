@@ -19,6 +19,7 @@ import re, os, pickle, time, csv
 import sys
 import time as t
 import random
+import winsound
 
 # local file
 # from rm_cfg import cfg, request_url
@@ -72,6 +73,11 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
         writer = csv.writer(f)
         for i in allPostings:
             writer.writerow(i)
+
+def beep():
+    frequency = 2500  # Set Frequency To 2500 Hertz
+    duration = 1000  # Set Duration To 1000 ms == 1 second
+    winsound.Beep(frequency, duration)
 
 def get_time():
     return t.strftime('%d_%m_%d_%H_%M_%S')
@@ -230,7 +236,7 @@ def main():
     # iterate through the urls in random order
     # hdr = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) \
     #     Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"}
-    for url in random.sample(cl_city_urls, len(cl_city_urls))[1:4]:
+    for url in random.sample(cl_city_urls, len(cl_city_urls))[1:3]:
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, url))
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
@@ -238,9 +244,16 @@ def main():
         base_url = "{}/search/{}?s=".format(url, "thp")
 
         # postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad
-        scrape_all_pages(base_url, city, verbose)
+        try:
+            scrape_all_pages(base_url, city, verbose)
+        except:
+            beep()
+            sys.exit(1)
         url_count += 1
         sleep(30)
+
+    beep()
+
 
 
     # call the top-level function
