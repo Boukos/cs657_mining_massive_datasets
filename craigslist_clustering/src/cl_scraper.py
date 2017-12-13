@@ -151,7 +151,7 @@ def scrape_posting_information(postingURL, verbose=False):
     # Parse only address within the div tags
     postStreetAddress = get_addresses(postingSoup)
 
-    return [postTitle, postingURL, ','.join(postLocation), postText[0], postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource]
+    return [postTitle, postingURL, postLocation, ','.join(postText[0], postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource])
 
 # Save Results in CSV # example filename: 'craigslist_posting_therapeutic.csv'
 def save_postings_to_csv(allPostings, fileName, verbose=False):
