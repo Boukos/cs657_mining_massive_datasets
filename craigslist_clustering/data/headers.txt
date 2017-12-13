@@ -1,1 +1,1 @@
-postTitle, postingURL, postLocation, ad, time, lat, long, address, dateRetrieved, post_date
+postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad

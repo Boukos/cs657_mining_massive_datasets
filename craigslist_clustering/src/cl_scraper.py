@@ -16,6 +16,7 @@ from time import sleep
 from requests import session
 import pandas as pd
 import re, os, pickle, time, csv
+import time as t
 
 # local file
 # from rm_cfg import cfg, request_url
@@ -23,13 +24,15 @@ import re, os, pickle, time, csv
 print(os.listdir(os.curdir))
 # Save Results in CSV # example filename: 'craigslist_posting_therapeutic.csv'
 def save_postings_to_csv(allPostings, fileName, verbose=False):
-
     if verbose: print 'save_postings_to_csv'
-    fileName = "{}_{}.csv".format(fileName, datetime.datetime.today())
+    fileName = "{}_{}.csv".format(fileName, get_time())
     with open(fileName, 'wb') as f:
         writer = csv.writer(f)
         for i in allPostings:
             writer.writerow(i)
+
+def get_time():
+    return t.strftime('%d_%m_%d_%H_%M_%S')
 
 def read_in_city_urls(fn="CraigslistURLs.csv", verbose=False):
     if verbose: print 'Reading csvs'
@@ -96,7 +99,7 @@ def scrape_postings_from_page(baseSoup, verbose=False):
         postingURL = line.get('href')
         postingInfo = scrape_posting_information(postingURL, verbose)
         allPostings.append(postingInfo)
-        sleep(0.5)
+        sleep(120)
     return allPostings
 
 def scrape_posting_information(postingURL, verbose=False):
@@ -160,8 +163,7 @@ def scrape_posting_information(postingURL, verbose=False):
 
     # Parse only address within the div tags
     postStreetAddress = get_addresses(postingSoup)
-
-    return [postTitle, postingURL, postLocation, ','.join(postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource, postText[0])]
+    return [postTitle, postingURL, ",".join(postLocation), postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource, postText[0]]
 
 def main():
     verbose = True
@@ -173,7 +175,7 @@ def main():
 
     # different listing in craigslist like personnals etc.
     # for cl_listing in listings:
-    for url in cl_city_urls[:1]:
+    for url in cl_city_urls[1:2]:
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, url))
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
@@ -182,6 +184,7 @@ def main():
         # postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad
         scrape_all_pages(base_url, verbose)
         url_count += 1
+        sleep(500)
 
 
     # call the top-level function
