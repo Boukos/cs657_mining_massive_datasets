@@ -18,14 +18,24 @@ import pandas as pd
 import re, os, pickle, time, csv
 
 # local file
-from rm_cfg import cfg, request_url
+# from rm_cfg import cfg, request_url
 
+print(os.listdir(os.curdir))
+# Save Results in CSV # example filename: 'craigslist_posting_therapeutic.csv'
+def save_postings_to_csv(allPostings, fileName, verbose=False):
+
+    if verbose: print 'save_postings_to_csv'
+    fileName = "{}_{}.csv".format(fileName, datetime.datetime.today())
+    with open(fileName, 'wb') as f:
+        writer = csv.writer(f)
+        for i in allPostings:
+            writer.writerow(i)
 
 def read_in_city_urls(fn="CraigslistURLs.csv", verbose=False):
     if verbose: print 'Reading csvs'
     cur_dir = os.path.abspath(os.curdir)
-    input_dir = os.path.join(cur_dir, "..", "..","inputs" )
-    file_path = os.path.join(input_dir, fn)
+    input_dir = os.path.join(cur_dir, "..", "data")
+    file_path = os.path.normpath(os.path.join(input_dir, fn))
     cl_url_df = pd.read_csv(file_path, header=0)
     return cl_url_df["link"].tolist()
 
@@ -53,7 +63,7 @@ def scrape_all_pages(baseURL, verbose=False):
             print str(i) + ' postings scraped.'
             allPostings += scrape_page(baseURL + str(i))
             i += pageSize
-        save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic.csv')
+        save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
     else:
         print("there were no postings")
         pass
@@ -151,15 +161,8 @@ def scrape_posting_information(postingURL, verbose=False):
     # Parse only address within the div tags
     postStreetAddress = get_addresses(postingSoup)
 
-    return [postTitle, postingURL, postLocation, ','.join(postText[0], postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource])
+    return [postTitle, postingURL, postLocation, ','.join(postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource, postText[0])]
 
-# Save Results in CSV # example filename: 'craigslist_posting_therapeutic.csv'
-def save_postings_to_csv(allPostings, fileName, verbose=False):
-    if verbose: print 'save_postings_to_csv'
-    with open(fileName, 'wb') as f:
-        writer = csv.writer(f)
-        for i in allPostings:
-            writer.writerow(i)
 def main():
     verbose = True
     listings = ['stp', 'w4w', 'w4m', 'm4m', 'msr', 'cas']
@@ -170,11 +173,13 @@ def main():
 
     # different listing in craigslist like personnals etc.
     # for cl_listing in listings:
-    for url in cl_city_urls:
+    for url in cl_city_urls[:1]:
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, url))
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
-        # url, sublocation, theraputic message services
+        # url, theraputic message services
         base_url = "{}/search/{}?s=".format(url, "thp")
+
+        # postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad
         scrape_all_pages(base_url, verbose)
         url_count += 1
 
