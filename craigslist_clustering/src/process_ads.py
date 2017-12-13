@@ -16,17 +16,18 @@ from pyspark.mllib.recommendation import ALS, MatrixFactorizationModel, Rating
 
 # import python stuff
 import numpy as np
-import os, csv, sys, time
+import os
+import csv
+import sys
+import time
 from random import randint
-from itertools import izip, izip_longest
-from short_user_profile import short_review_list
-from long_user_profile import long_review_list
+# from itertools import izip, izip_longest
 
-def get_movie_names(fn, sc):
-    movies_raw_rdd = sc.TextFile(fn)
-    header = movies_raw_rdd.first()
-    movies_raw_rdd = movies_raw_rdd.filter(lambda line: line != header)
-    # [(movieid, 'movie_name')...]
+def get_cl_ads(fn, sc):
+    raw_rdd = sc.TextFile(fn)
+    header = raw_rdd.first()
+    raw_rdd = raw_rdd.filter(lambda line: line != header)
+    # [(postTitle, postingURL, postLocation, ad, time, lat, long, address, dateRetrieved, post_date ),...]
     movies_rdd = movies_raw_rdd.map(lambda line: line.split(","))\
                                .map(lambda x: (int(x[0]), x[1])).cache()
 
