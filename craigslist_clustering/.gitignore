@@ -1,9 +1,7 @@
-data/*.csv
 output/*
 test_input/ratings_small_processed.csv
 hydra_output/*
 metastore_db/*
 derby.log
-results/*.csv
 *metastore_db
 *.zip
