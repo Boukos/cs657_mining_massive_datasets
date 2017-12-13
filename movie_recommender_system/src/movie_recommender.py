@@ -1,57 +1,70 @@
 #!/usr/bin/python2
 
-# import findspark
-# findspark.init()
-
 # import spark stuff
 from pyspark import SparkContext
 from pyspark import SparkConf
 
 #import mllib
 from pyspark.mllib.evaluation import RegressionMetrics
-from pyspark.mllib.recommendation import ALS, MatrixFactorizationModel, Rating
+from pyspark.mllib.recommendation import ALS, Rating
 
 # import python stuff
 import numpy as np
 import os, csv, sys, time
 from random import randint
 from itertools import izip
-from short_user_profile import short_review_list
-from long_user_profile import long_review_list
+
+# created file
+from new_user_profile import new_user_review_list
 
 def get_movie_names(fn, sc):
-    movies_raw_rdd = sc.TextFile(fn)
+    movies_raw_rdd = sc.textFile(fn)
     header = movies_raw_rdd.first()
     movies_raw_rdd = movies_raw_rdd.filter(lambda line: line != header)
     # [(movieid, 'movie_name')...]
     movies_rdd = movies_raw_rdd.map(lambda line: line.split(","))\
-                               .map(lambda x: (int(x[0]), x[1])).cache()
+                               .map(lambda x: (int(x[0]), x[1]))
+    return movies_rdd
 
-def train_with_new_user(sc, full_reviews_rdd, rank, reg_param, seed=12345, itr=5, get_small_ratings=True):
-    if get_small_ratings:
-        new_user = short_review_list
-    else:
-        new_user = long_review_list
-    # [(user_id, movie_id, rating),...]
-    new_user_rdd = sc.parallelize(new_user).map(lambda x: (int(x[0]), int(x[1]), float(x[2])))
-    ratings_rdd = new_user_rdd.union(full_reviews_rdd)
-    updated_model = ALS.train(ratings_rdd, rank=rank, seed=seed, iterations=itr, lambda_=reg_param)
+
+def train_with_new_user(new_user_rdd, movies_rdd, ratings_rdd, rank, reg_param, seed, iterations, verbose=False,
+                        log_fn="hdfs_output.txt"):
     # list of movie ids that user has rated
-    movies_user_rated = map(lambda x: x[1], new_user)
+    movies_user_rated = [user_movie[1] for user_movie in new_user_review_list]
+    if verbose: log_output(log_fn, "List of movies ids!:{}".format(movies_user_rated))
+
+    # combine datasets
+    # [(user_id, movie_id, rating), ...]
+    ratings_rdd = new_user_rdd.union(ratings_rdd)
+    if verbose: log_output(log_fn, "THESE are the ratings!:{}".format(ratings_rdd.take(5)))
+
+    #train model
+    updated_model = ALS.train(ratings_rdd, rank=rank, seed=seed, iterations=iterations, lambda_=reg_param)
 
     # userid is 0
     # [(0, movie_id), ...]
-    unrated_movies_rdd = ratings_rdd.filter(lambda x: x[0] not in movies_user_rated).map(lambda x: (0, x[0]))
+    unrated_movies_rdd = ratings_rdd.filter(lambda x: x[1] not in movies_user_rated).map(lambda x: (0, x[1]))
+    if verbose: log_output(log_fn, "These are the unrated movies!:{}".format(unrated_movies_rdd.take(5)))
 
     # predict movie ratings
+    # [(user_id, movie_id, r_hat),...]
     user_recommendations_rdd = updated_model.predictAll(unrated_movies_rdd)
+    if verbose: log_output(log_fn, "These are the recommended movies!:{}".format(user_recommendations_rdd.take(5)))
 
     # create key value pairs
-    recommendation_rdd = user_recommendations_rdd.map(lambda x: (x.product, x.rating))
+    # [(movie_id, r_hat), ...]
+    recommendation_rdd = user_recommendations_rdd.map(lambda x: (x[1], x[2]))
+    if verbose: log_output(log_fn, "These are the recommended movies!:{}".format(recommendation_rdd.take(5)))
 
-    top_movies = recommendation_rdd.takeOrdered(25, key=lambda x: x[1])
-    print(top_movies)
-    test_results_to_disk("top_movies", top_movies)
+    # join movies and predicted ratings on movie id, then reorganize
+    # join -> [(movie_id, (r_hat, movie_title)), ...]
+    # map -> [(movie_title, r_hat), ...]
+    predicted_movie_ratings_rdd = recommendation_rdd.join(movies_rdd).map(lambda x: (x[1][1], x[1][0]))
+
+    top_movies = predicted_movie_ratings_rdd.takeOrdered(50, key=lambda x: -x[1])
+    if verbose: log_output(log_fn, "Top movies:{}".format(top_movies))
+    test_results_to_disk("top_movies.txt", top_movies)
+    return top_movies
 
 def log_output(fn, statement):
     with open(fn, 'a') as log:
@@ -117,8 +130,6 @@ def evaluate_recommender(train_set, test_set, rank, itr, reg_param, log_fn, verb
 
     # make predictions for test set from model
     # returns [((ui, mi), r_hati), ...]
-    # test_preds = sc.parallelize([(1,2),(1,5),(2,1)])
-    # predictions = rec_model.predictAll(test_preds)
     # if verbose: log_output(log_fn, "Predictions test:\n{}\n--".format(predictions.take(5)))
 
     predictions = rec_model.predictAll(x_test).map(lambda x: ((x[0], x[1]), x[2]))
@@ -160,8 +171,8 @@ def grid_search(cv_rdd, k_folds, ranks, reg_params, iterations, num_of_rows, log
 
                 # find evaluation metrics
                 try:
-                    results = evaluate_recommender(train_rdd, validate_rdd, rank, iterations,
-                                                   reg_param, log_fn, verbose, seed)
+                    results = evaluate_recommender(train_rdd, validate_rdd, rank, iterations, reg_param, log_fn,
+                                                   verbose, seed)
                 except:
                     e = sys.exc_info()[0]
                     log_output(log_fn, e)
@@ -293,7 +304,6 @@ def get_ratings_rdd(all_data, get_sample, run_sample_pct, log_fn, verbose, seed=
     if verbose: log_output(log_fn, "these are the ratings:\n{}\n--".format(ratings.take(5)))
     return ratings
 
-
 def main():
     start_time = time.time()
 
@@ -312,12 +322,12 @@ def main():
     train_new_user = True
 
     # dataset size is ~2E7
-    run_sample_pct = 1E-1
+    run_sample_pct = 1E-2
     k_folds = 5
     seed = 12345
-    iterations = 5
-    rank = 10
-    reg_param = 0.05
+    iterations = 10
+    rank = 5
+    reg_param = 0.01
 
     input_file_path, movies_file_path, output_fn = get_inputs()
 
@@ -327,7 +337,6 @@ def main():
     dataset_size = all_data.count() - 1
 
     ratings = get_ratings_rdd(all_data, get_sample, run_sample_pct, log_fn, verbose, seed)
-    #movies_rdd = get_movie_names(movies_file_path)
 
     # this is a transformation so only acts if grid search or run test eval is run
     train_set, test_set = ratings.randomSplit([0.8, 0.2], seed=seed)
@@ -356,7 +365,7 @@ def main():
         if verbose: log_output(log_fn, "About to run Test run")
 
         # return test results
-        results = evaluate_recommender(train_set, test_set, rank, iterations, reg_param)
+        results = evaluate_recommender(train_set, test_set, rank, iterations, reg_param, log_fn, verbose, seed)
         MSE, RMSE, exp_var, MAE = results
 
         if verbose: log_output(log_fn, "Saving test results to disk")
@@ -371,7 +380,12 @@ def main():
         if verbose: log_output(log_fn, "Completed run")
 
     if train_new_user:
-        train_with_new_user(sc, ratings, rank, reg_param, seed=12345, itr=iterations, get_small_ratings=True)
+        # [(user_id, movie_id, rating),...]
+        new_user_rdd = sc.parallelize(new_user_review_list).map(lambda x: (int(x[0]), int(x[1]), float(x[2])))
+        movies_rdd = get_movie_names(movies_file_path, sc)
+        top_movies = train_with_new_user(new_user_rdd, movies_rdd, ratings, rank, reg_param, seed, iterations)
+        print(top_movies)
+
 
 if __name__ == "__main__":
     main()
