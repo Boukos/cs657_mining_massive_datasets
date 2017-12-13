@@ -57,11 +57,18 @@ user_agent_list = [
     'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:28.0) AppleWebKit/534.57.2 (KHTML, like Gecko) Version/5.1.7 Safari/534.57.2',
 ]
 
+
 # Save Results in CSV # example filename: 'craigslist_posting_therapeutic.csv'
 def save_postings_to_csv(allPostings, fileName, verbose=False):
-    if verbose: print 'save_postings_to_csv'
-    fileName = "{}_{}.csv".format(fileName, get_time())
-    with open(fileName, 'wb') as f:
+    if verbose: print('save_postings_to_csv')
+
+    # get file direcotry
+    cur_dir = os.path.abspath(os.curdir)
+    fn = "{}_{}.csv".format(fileName, get_time())
+    file_path = os.path.normpath(os.path.join(cur_dir, "..", "data", fn))
+
+    # write file to disk
+    with open(file_path, 'a+') as f:
         writer = csv.writer(f)
         for i in allPostings:
             writer.writerow(i)
