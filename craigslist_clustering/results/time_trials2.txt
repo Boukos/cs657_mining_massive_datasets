@@ -1,0 +1,183 @@
+
+real	3m18.635s
+user	0m38.015s
+sys	0m5.428s
+-bash: /home/sarmstr5/cs657/movie_recommender_system/results/hdfs_stdout.txt: ambiguous redirect
+
+real	0m0.016s
+user	0m0.000s
+sys	0m0.002s
+-bash: /home/sarmstr5/cs657/movie_recommender_system/src/hdfs_stdout.txt: ambiguous redirect
+
+real	0m0.020s
+user	0m0.000s
+sys	0m0.002s
+-bash: hello.txt: ambiguous redirect
+
+real	0m0.056s
+user	0m0.000s
+sys	0m0.001s
+
+real	0m8.905s
+user	0m11.718s
+sys	0m1.644s
+
+real	3m3.419s
+user	0m37.893s
+sys	0m5.152s
+
+real	3m5.643s
+user	0m40.549s
+sys	0m5.595s
+
+real	3m6.084s
+user	0m38.680s
+sys	0m5.153s
+
+real	3m2.991s
+user	0m36.894s
+sys	0m5.099s
+
+real	3m1.070s
+user	0m38.446s
+sys	0m5.384s
+
+real	3m6.088s
+user	0m38.224s
+sys	0m5.439s
+
+real	5m4.242s
+user	0m58.705s
+sys	0m6.993s
+
+real	5m18.333s
+user	0m56.278s
+sys	0m7.430s
+
+real	0m3.039s
+user	0m2.951s
+sys	0m0.602s
+
+real	0m2.889s
+user	0m2.945s
+sys	0m0.592s
+
+real	0m2.780s
+user	0m2.948s
+sys	0m0.572s
+
+real	0m2.743s
+user	0m2.931s
+sys	0m0.536s
+
+real	5m18.655s
+user	1m0.971s
+sys	0m7.528s
+
+real	0m3.147s
+user	0m2.948s
+sys	0m0.542s
+
+real	5m2.383s
+user	1m3.001s
+sys	0m7.272s
+
+real	5m2.147s
+user	1m2.275s
+sys	0m7.384s
+
+real	5m0.420s
+user	1m1.641s
+sys	0m7.080s
+
+real	5m9.431s
+user	1m0.395s
+sys	0m7.339s
+
+real	5m32.713s
+user	1m3.212s
+sys	0m7.015s
+
+real	5m30.184s
+user	1m6.615s
+sys	0m8.549s
+
+real	6m25.638s
+user	1m5.681s
+sys	0m7.086s
+
+real	5m11.148s
+user	1m11.792s
+sys	0m7.951s
+
+real	5m11.706s
+user	1m0.158s
+sys	0m7.215s
+
+real	5m22.291s
+user	1m2.939s
+sys	0m7.682s
+
+real	5m10.311s
+user	1m4.515s
+sys	0m7.217s
+
+real	5m11.955s
+user	1m2.027s
+sys	0m7.669s
+
+real	5m23.970s
+user	0m59.309s
+sys	0m7.416s
+
+real	5m7.818s
+user	0m57.596s
+sys	0m7.092s
+
+real	0m2.916s
+user	0m2.937s
+sys	0m0.554s
+
+real	4m57.135s
+user	0m58.951s
+sys	0m7.418s
+
+real	5m23.844s
+user	1m11.542s
+sys	0m7.957s
+
+real	5m4.368s
+user	1m0.288s
+sys	0m7.256s
+
+real	3m12.690s
+user	0m38.832s
+sys	0m5.327s
+
+real	5m10.373s
+user	1m13.515s
+sys	0m8.002s
+
+real	5m33.923s
+user	1m15.889s
+sys	0m8.337s
+
+real	5m8.003s
+user	1m13.503s
+sys	0m8.162s
+
+real	50m4.994s
+user	6m19.763s
+sys	0m25.929s
+
+real	0m6.509s
+user	0m3.513s
+sys	0m0.835s
+
+real	22m56.015s
+user	2m57.921s
+sys	0m15.069s
+
+real	0m4.509s
+user	0m3.315s
+sys	0m0.817s
