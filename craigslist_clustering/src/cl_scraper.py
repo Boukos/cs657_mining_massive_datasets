@@ -16,17 +16,59 @@ from time import sleep
 from requests import session
 import pandas as pd
 import re, os, pickle, time, csv
+import sys
 import time as t
+import random
 
 # local file
 # from rm_cfg import cfg, request_url
 
-print(os.listdir(os.curdir))
+
+# list of browswers as seen by the site, to look like various users, vary to reduce chance of ban
+# found samples on https://gist.github.com/seagatesoft/e7de4e3878035726731d
+# https://github.com/aivarsk/scrapy-proxies, package that allows you to use proxy ip address
+user_agent_list = [
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
+    "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
+    "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.9 Safari/536.5",
+    "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.36 Safari/536.5",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+    "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"
+    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:23.0) Gecko/20100101 Firefox/23.0',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36',
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; WOW64; Trident/6.0)',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.146 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64; rv:24.0) Gecko/20140205 Firefox/24.0 Iceweasel/24.3.0',
+    'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0',
+    'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:28.0) AppleWebKit/534.57.2 (KHTML, like Gecko) Version/5.1.7 Safari/534.57.2',
+]
+
+
 # Save Results in CSV # example filename: 'craigslist_posting_therapeutic.csv'
 def save_postings_to_csv(allPostings, fileName, verbose=False):
-    if verbose: print 'save_postings_to_csv'
-    fileName = "{}_{}.csv".format(fileName, get_time())
-    with open(fileName, 'wb') as f:
+    if verbose: print('save_postings_to_csv')
+
+    # get file direcotry
+    cur_dir = os.path.abspath(os.curdir)
+    fn = "{}_withcities.csv".format(fileName)
+    file_path = os.path.normpath(os.path.join(cur_dir, "..", "data", fn))
+
+    # write file to disk
+    with open(file_path, 'a+') as f:
         writer = csv.writer(f)
         for i in allPostings:
             writer.writerow(i)
@@ -34,17 +76,18 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
 def get_time():
     return t.strftime('%d_%m_%d_%H_%M_%S')
 
-def read_in_city_urls(fn="CraigslistURLs.csv", verbose=False):
+def read_in_city_urls(fn="CraigslistURLs.csv", verbose=True):
     if verbose: print 'Reading csvs'
     cur_dir = os.path.abspath(os.curdir)
-    input_dir = os.path.join(cur_dir, "..", "data")
+    input_dir = os.path.join(cur_dir, "..", "..", "craigslist_clustering", "data" )
     file_path = os.path.normpath(os.path.join(input_dir, fn))
+    print(file_path)
     cl_url_df = pd.read_csv(file_path, header=0)
-    return cl_url_df["link"].tolist()
+    return cl_url_df["link"].tolist(), cl_url_df["city"].tolist(),
 
 def save_to_database(dataPostings):
     print 'saving to database'
-    cnx = mysql.connector.connect(user='melissa', password='HT_daen690', host='ec2-52-87-253-53.compute-1.amazonaws.com', database='NOVA_HT_TEST',charset='utf8mb4')
+    cnx = mysql.connector.connect(user='shane', password='HT_daen690', host='ec2-52-87-253-53.compute-1.amazonaws.com', database='NOVA_HT_TEST',charset='utf8mb4')
     dbCursor = cnx.cursor()
     for data in allPostings:
         dbCursor.execute('''INSERT INTO CL_EXTRACT (cl_ad_title, cl_url, cl_location, cl_ad, cl_ad_dt, cl_lat, cl_lon, cl_ad_street_addr, date_retrieved, data_source) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''', data)
@@ -52,19 +95,24 @@ def save_to_database(dataPostings):
     cnx.close()
     print 'saved_to_database'
 
-def scrape_all_pages(baseURL, verbose=False):
+def scrape_all_pages(baseURL, city, verbose=False):
     if verbose: print 'scrape_all_pages'
     pageSize = 120
     # scrape the first page of results, and return the total number of result listings
     # as well as the parsed postings.
-    (allPostings, totalPostings) = scrape_page(baseURL + "0", True, verbose)
+    (allPostings, totalPostings) = scrape_page(baseURL + "0", city, True, verbose)
 
     # scrape the remaining result pages. 120 results listed per page by default.
     if totalPostings: # if not None
         i = pageSize
         while i < totalPostings:
             print str(i) + ' postings scraped.'
-            allPostings += scrape_page(baseURL + str(i))
+            try:
+                allPostings += scrape_page(baseURL + str(i), city)
+            except:
+                print("failed to scrape page, saving progress to file")
+                save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
+                sys.exit(1)
             i += pageSize
         save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
     else:
@@ -74,14 +122,18 @@ def scrape_all_pages(baseURL, verbose=False):
     # save_to_database(allPostings)
 
 
-def scrape_page(therapeuticURL, firstPage=False, verbose=False):
+def scrape_page(therapeuticURL, city, firstPage=False, verbose=False):
     if verbose: print 'scrape_page'
     # Prevent site from 403 Forbidden error
-    hdr = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) \
-    Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"}
+    # get random hdr
+    rand_i = random.randrange(0, len(user_agent_list))
+    hdr = {'User-Agent':user_agent_list[rand_i]}
+    if verbose: print(hdr)
+
+    # queryhttps://github.com/aivarsk/scrapy-proxies
     therapeuticRequest = urllib2.Request(therapeuticURL, headers=hdr)
     baseSoup = BeautifulSoup(urllib2.urlopen(therapeuticRequest), "lxml")
-    pagePostings = scrape_postings_from_page(baseSoup, verbose)
+    pagePostings = scrape_postings_from_page(baseSoup, city, verbose)
     if firstPage:
         count_soup = baseSoup.find('span', {'class': ['totalcount']})
         totalPostings = int(count_soup.text) if count_soup else None
@@ -92,17 +144,17 @@ def scrape_page(therapeuticURL, firstPage=False, verbose=False):
 
 
 # finds and scrapes data from each posting on the current result page
-def scrape_postings_from_page(baseSoup, verbose=False):
+def scrape_postings_from_page(baseSoup, city, verbose=False):
     if verbose: print 'scrape_postings_from_page'
     allPostings = []
     for line in baseSoup.find_all('a', { 'class': ['result-title', 'hdrlink']}):
         postingURL = line.get('href')
-        postingInfo = scrape_posting_information(postingURL, verbose)
+        postingInfo = scrape_posting_information(postingURL, city, verbose)
         allPostings.append(postingInfo)
-        sleep(120)
+        sleep(5)
     return allPostings
 
-def scrape_posting_information(postingURL, verbose=False):
+def scrape_posting_information(postingURL, city, verbose=False):
     def get_title(postingSoup):
         postTitle = postingSoup.select('span[id="titletextonly"]')
         return postTitle[0].text.encode('utf-8') if postTitle else ''
@@ -163,28 +215,32 @@ def scrape_posting_information(postingURL, verbose=False):
 
     # Parse only address within the div tags
     postStreetAddress = get_addresses(postingSoup)
-    return [postTitle, postingURL, ",".join(postLocation), postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource, postText[0]]
+    return [postTitle, postingURL, city, ",".join(postLocation), postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource, postText[0]]
 
 def main():
     verbose = True
     listings = ['stp', 'w4w', 'w4m', 'm4m', 'msr', 'cas']
-    cl_city_urls = read_in_city_urls(verbose=verbose)
+    cl_city_urls, city = read_in_city_urls(verbose=verbose)
 
     url_count = 1
     n_urls = len(cl_city_urls)
 
     # different listing in craigslist like personnals etc.
     # for cl_listing in listings:
-    for url in cl_city_urls[1:2]:
+    # iterate through the urls in random order
+    # hdr = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) \
+    #     Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"}
+    for url in random.sample(cl_city_urls, len(cl_city_urls))[1:4]:
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, url))
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
+
         base_url = "{}/search/{}?s=".format(url, "thp")
 
         # postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad
-        scrape_all_pages(base_url, verbose)
+        scrape_all_pages(base_url, city, verbose)
         url_count += 1
-        sleep(500)
+        sleep(30)
 
 
     # call the top-level function
