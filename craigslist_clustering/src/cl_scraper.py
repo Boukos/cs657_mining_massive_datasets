@@ -16,12 +16,14 @@ from time import sleep
 from requests import session
 import pandas as pd
 import re, os, pickle, time, csv
+import sys
 import time as t
+import random
 
 # local file
 # from rm_cfg import cfg, request_url
 
-print(os.listdir(os.curdir))
+
 # Save Results in CSV # example filename: 'craigslist_posting_therapeutic.csv'
 def save_postings_to_csv(allPostings, fileName, verbose=False):
     if verbose: print 'save_postings_to_csv'
@@ -39,12 +41,13 @@ def read_in_city_urls(fn="CraigslistURLs.csv", verbose=False):
     cur_dir = os.path.abspath(os.curdir)
     input_dir = os.path.join(cur_dir, "..", "data")
     file_path = os.path.normpath(os.path.join(input_dir, fn))
+    print(file_path)
     cl_url_df = pd.read_csv(file_path, header=0)
     return cl_url_df["link"].tolist()
 
 def save_to_database(dataPostings):
     print 'saving to database'
-    cnx = mysql.connector.connect(user='melissa', password='HT_daen690', host='ec2-52-87-253-53.compute-1.amazonaws.com', database='NOVA_HT_TEST',charset='utf8mb4')
+    cnx = mysql.connector.connect(user='shane', password='HT_daen690', host='ec2-52-87-253-53.compute-1.amazonaws.com', database='NOVA_HT_TEST',charset='utf8mb4')
     dbCursor = cnx.cursor()
     for data in allPostings:
         dbCursor.execute('''INSERT INTO CL_EXTRACT (cl_ad_title, cl_url, cl_location, cl_ad, cl_ad_dt, cl_lat, cl_lon, cl_ad_street_addr, date_retrieved, data_source) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''', data)
@@ -64,7 +67,12 @@ def scrape_all_pages(baseURL, verbose=False):
         i = pageSize
         while i < totalPostings:
             print str(i) + ' postings scraped.'
-            allPostings += scrape_page(baseURL + str(i))
+            try:
+                allPostings += scrape_page(baseURL + str(i))
+            except:
+                print("failed to scrape page, saving to file")
+                save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
+                sys.exit(1)
             i += pageSize
         save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
     else:
@@ -99,7 +107,7 @@ def scrape_postings_from_page(baseSoup, verbose=False):
         postingURL = line.get('href')
         postingInfo = scrape_posting_information(postingURL, verbose)
         allPostings.append(postingInfo)
-        sleep(120)
+        sleep(5)
     return allPostings
 
 def scrape_posting_information(postingURL, verbose=False):
@@ -175,7 +183,8 @@ def main():
 
     # different listing in craigslist like personnals etc.
     # for cl_listing in listings:
-    for url in cl_city_urls[1:2]:
+    # iterate through the urls in random order
+    for url in random.sample(cl_city_urls, len(cl_city_urls)):
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, url))
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
