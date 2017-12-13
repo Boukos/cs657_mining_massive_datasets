@@ -64,7 +64,7 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
 
     # get file direcotry
     cur_dir = os.path.abspath(os.curdir)
-    fn = "{}_{}.csv".format(fileName, get_time())
+    fn = "{}_withcities.csv".format(fileName)
     file_path = os.path.normpath(os.path.join(cur_dir, "..", "data", fn))
 
     # write file to disk
@@ -79,8 +79,9 @@ def get_time():
 def read_in_city_urls(fn="CraigslistURLs.csv", verbose=True):
     if verbose: print 'Reading csvs'
     cur_dir = os.path.abspath(os.curdir)
-    input_dir = os.path.join(cur_dir, "..", "..","inputs" )
-    file_path = os.path.join(input_dir, fn)
+    input_dir = os.path.join(cur_dir, "..", "..", "craigslist_clustering", "data" )
+    file_path = os.path.normpath(os.path.join(input_dir, fn))
+    print(file_path)
     cl_url_df = pd.read_csv(file_path, header=0)
     return cl_url_df["link"].tolist(), cl_url_df["city"].tolist(),
 
@@ -229,7 +230,7 @@ def main():
     # iterate through the urls in random order
     # hdr = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) \
     #     Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"}
-    for url in random.sample(cl_city_urls, len(cl_city_urls))[1:3]:
+    for url in random.sample(cl_city_urls, len(cl_city_urls))[1:4]:
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, url))
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
