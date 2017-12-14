@@ -115,11 +115,12 @@ def scrape_all_pages(baseURL, city, listing, verbose=False):
         while i < totalPostings:
             print str(i) + ' postings scraped.'
             try:
-                allPostings += scrape_page(baseURL + str(i), city)
+                allPostings += scrape_page(baseURL + str(i), city, listing)
             except:
                 print("failed to scrape page, saving progress to file")
                 save_postings_to_csv(allPostings, 'craigslist_posting_{}'.format(listing))
-                sys.exit(1)
+                sleep(0.5)
+                raise
             i += pageSize
         save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
     else:
@@ -129,7 +130,7 @@ def scrape_all_pages(baseURL, city, listing, verbose=False):
     # save_to_database(allPostings)
 
 
-def scrape_page(therapeuticURL, city, firstPage=False, verbose=False):
+def scrape_page(therapeuticURL, city, listing, firstPage=False, verbose=False):
     if verbose: print 'scrape_page'
     # Prevent site from 403 Forbidden error
     # get random hdr
@@ -140,7 +141,7 @@ def scrape_page(therapeuticURL, city, firstPage=False, verbose=False):
     # queryhttps://github.com/aivarsk/scrapy-proxies
     therapeuticRequest = urllib2.Request(therapeuticURL, headers=hdr)
     baseSoup = BeautifulSoup(urllib2.urlopen(therapeuticRequest), "lxml")
-    pagePostings = scrape_postings_from_page(baseSoup, city, verbose)
+    pagePostings = scrape_postings_from_page(baseSoup, city, listing, verbose)
     if firstPage:
         count_soup = baseSoup.find('span', {'class': ['totalcount']})
         totalPostings = int(count_soup.text) if count_soup else None
@@ -151,7 +152,7 @@ def scrape_page(therapeuticURL, city, firstPage=False, verbose=False):
 
 
 # finds and scrapes data from each posting on the current result page
-def scrape_postings_from_page(baseSoup, city, verbose=False):
+def scrape_postings_from_page(baseSoup, city, listing, verbose=False):
     if verbose: print 'scrape_postings_from_page'
     allPostings = []
     for line in baseSoup.find_all('a', { 'class': ['result-title', 'hdrlink']}):
@@ -159,7 +160,10 @@ def scrape_postings_from_page(baseSoup, city, verbose=False):
         try:
             postingInfo = scrape_posting_information(postingURL, city, verbose)
         except:
-            continue
+            print("scrape_posting_information failed")
+            save_postings_to_csv(allPostings, 'craigslist_posting_{}'.format(listing))
+            sleep(0.5)
+            raise
         allPostings.append(postingInfo)
         sleep(0.5)
     return allPostings
@@ -225,7 +229,8 @@ def scrape_posting_information(postingURL, city, verbose=False):
 
     # Parse only address within the div tags
     postStreetAddress = get_addresses(postingSoup)
-    return ["", postText[0], postTitle, postingURL, city, ",".join(postLocation), postTime[0], lat, lon,
+    return ["", postText[0]+postTitle,
+            postText[0], postTitle, postingURL, city, ",".join(postLocation), postTime[0], lat, lon,
             postStreetAddress,postDateRetrieved, postDataSource]
 
 def main():
@@ -263,7 +268,7 @@ def main():
             beep()
             raise
         url_count += 1
-        sleep(30)
+        sleep(5)
 
     beep()
 
