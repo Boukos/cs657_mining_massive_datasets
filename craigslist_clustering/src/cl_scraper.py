@@ -20,7 +20,8 @@ import sys
 import time as t
 import random
 import winsound
-
+from itertools import izip
+    
 # local file
 # from rm_cfg import cfg, request_url
 
@@ -69,7 +70,7 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
     file_path = os.path.normpath(os.path.join(cur_dir, "..", "data", fn))
 
     # write file to disk
-    with open(file_path, 'a+') as f:
+    with open(file_path, 'a') as f:
         writer = csv.writer(f)
         for i in allPostings:
             writer.writerow(i)
@@ -221,31 +222,34 @@ def scrape_posting_information(postingURL, city, verbose=False):
 
     # Parse only address within the div tags
     postStreetAddress = get_addresses(postingSoup)
-    return [postTitle, postingURL, city, ",".join(postLocation), postTime[0], lat, lon, postStreetAddress, postDateRetrieved, postDataSource, postText[0]]
+    return ["", postText[0], postTitle, postingURL, city, ",".join(postLocation), postTime[0], lat, lon,
+            postStreetAddress,postDateRetrieved, postDataSource]
 
 def main():
     verbose = True
     listings = ['stp', 'w4w', 'w4m', 'm4m', 'msr', 'cas']
-    cl_city_urls, city = read_in_city_urls(verbose=verbose)
+    cl_city_urls, cities = read_in_city_urls(verbose=verbose)
 
     url_count = 1
     n_urls = len(cl_city_urls)
+    n_runs = 2
+    rand_indxs = random.sample(range(n_urls), n_runs)
 
     # different listing in craigslist like personnals etc.
     # for cl_listing in listings:
     # iterate through the urls in random order
     # hdr = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) \
     #     Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"}
-    for url in random.sample(cl_city_urls, len(cl_city_urls))[1:3]:
-        if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, url))
+    for indx in rand_indxs:
+        if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, cl_city_urls[indx]))
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
 
-        base_url = "{}/search/{}?s=".format(url, "thp")
+        base_url = "{}/search/{}?s=".format(cl_city_urls[indx], "thp")
 
         # postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad
         try:
-            scrape_all_pages(base_url, city, verbose)
+            scrape_all_pages(base_url, cities[indx], verbose)
         except:
             beep()
             sys.exit(1)
