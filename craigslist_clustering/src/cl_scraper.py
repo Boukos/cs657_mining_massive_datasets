@@ -19,7 +19,7 @@ import re, os, pickle, time, csv
 import sys
 import time as t
 import random
-import winsound
+#import winsound
 from itertools import izip
     
 # local file
@@ -73,12 +73,13 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
     with open(file_path, 'ab') as f:
         writer = csv.writer(f)
         for i in allPostings:
-            writer.writerow(i)
+            writer.writerow(str(i.decode('utf-8','ignore')))
 
 def beep():
-    frequency = 2500  # Set Frequency To 2500 Hertz
-    duration = 1000  # Set Duration To 1000 ms == 1 second
-    winsound.Beep(frequency, duration)
+	pass
+    #frequency = 2500  # Set Frequency To 2500 Hertz
+    #duration = 1000  # Set Duration To 1000 ms == 1 second
+    #winsound.Beep(frequency, duration)
 
 def get_time():
     return t.strftime('%d_%m_%d_%H_%M_%S')
