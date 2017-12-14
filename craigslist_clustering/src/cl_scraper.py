@@ -70,7 +70,7 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
     file_path = os.path.normpath(os.path.join(cur_dir, "..", "data", fn))
 
     # write file to disk
-    with open(file_path, 'a') as f:
+    with open(file_path, 'ab') as f:
         writer = csv.writer(f)
         for i in allPostings:
             writer.writerow(i)
@@ -102,7 +102,7 @@ def save_to_database(dataPostings):
     cnx.close()
     print 'saved_to_database'
 
-def scrape_all_pages(baseURL, city, verbose=False):
+def scrape_all_pages(baseURL, city, listing, verbose=False):
     if verbose: print 'scrape_all_pages'
     pageSize = 120
     # scrape the first page of results, and return the total number of result listings
@@ -118,7 +118,7 @@ def scrape_all_pages(baseURL, city, verbose=False):
                 allPostings += scrape_page(baseURL + str(i), city)
             except:
                 print("failed to scrape page, saving progress to file")
-                save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
+                save_postings_to_csv(allPostings, 'craigslist_posting_{}'.format(listing))
                 sys.exit(1)
             i += pageSize
         save_postings_to_csv(allPostings, 'craigslist_posting_therapeutic')
@@ -156,9 +156,12 @@ def scrape_postings_from_page(baseSoup, city, verbose=False):
     allPostings = []
     for line in baseSoup.find_all('a', { 'class': ['result-title', 'hdrlink']}):
         postingURL = line.get('href')
-        postingInfo = scrape_posting_information(postingURL, city, verbose)
+        try:
+            postingInfo = scrape_posting_information(postingURL, city, verbose)
+        except:
+            continue
         allPostings.append(postingInfo)
-        sleep(5)
+        sleep(0.5)
     return allPostings
 
 def scrape_posting_information(postingURL, city, verbose=False):
@@ -227,7 +230,13 @@ def scrape_posting_information(postingURL, city, verbose=False):
 
 def main():
     verbose = True
-    listings = ['stp', 'w4w', 'w4m', 'm4m', 'msr', 'cas']
+
+    # randomly choose cl listing
+    listings = ['thp', 'stp', 'w4w', 'w4m', 'm4m', 'msr', 'cas']
+    rand_i = random.randrange(0, len(listings))
+    cl_listing = listings[rand_i]
+
+    # read in scrape urls
     cl_city_urls, cities = read_in_city_urls(verbose=verbose)
 
     url_count = 1
@@ -245,14 +254,14 @@ def main():
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
 
-        base_url = "{}/search/{}?s=".format(cl_city_urls[indx], "thp")
+        base_url = "{}/search/{}?s=".format(cl_city_urls[indx], cl_listing)
 
         # postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad
         try:
-            scrape_all_pages(base_url, cities[indx], verbose)
+            scrape_all_pages(base_url, cities[indx], cl_listing, verbose)
         except:
             beep()
-            sys.exit(1)
+            raise
         url_count += 1
         sleep(30)
 
