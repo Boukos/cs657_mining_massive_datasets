@@ -73,7 +73,7 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
     with open(file_path, 'ab') as f:
         writer = csv.writer(f)
         for i in allPostings:
-            writer.writerow(str(i.decode('utf-8','ignore')))
+            writer.writerow(i)
 
 def beep():
 	pass
@@ -239,15 +239,13 @@ def main():
 
     # randomly choose cl listing
     listings = ['thp', 'stp', 'w4w', 'w4m', 'm4m', 'msr', 'cas']
-    rand_i = random.randrange(0, len(listings))
-    cl_listing = listings[rand_i]
 
     # read in scrape urls
     cl_city_urls, cities = read_in_city_urls(verbose=verbose)
 
     url_count = 1
     n_urls = len(cl_city_urls)
-    n_runs = 2
+    n_runs = 5
     rand_indxs = random.sample(range(n_urls), n_runs)
 
     # different listing in craigslist like personnals etc.
@@ -256,6 +254,8 @@ def main():
     # hdr = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/534.30 (KHTML, like Gecko) \
     #     Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"}
     for indx in rand_indxs:
+        rand_i = random.randrange(0, len(listings))
+        cl_listing = 'thp' #listings[rand_i]
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, cl_city_urls[indx]))
         if verbose: print("this is the list: {} ".format(cl_listing))
 
