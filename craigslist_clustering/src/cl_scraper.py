@@ -257,6 +257,8 @@ def main():
     #     Ubuntu/11.04 Chromium/12.0.742.112 Chrome/12.0.742.112 Safari/534.30"}
     for indx in rand_indxs:
         if verbose: print("on url {} of {}: {} ".format(url_count, n_urls, cl_city_urls[indx]))
+        if verbose: print("this is the list: {} ".format(cl_listing))
+
         # baseURL = "https://washingtondc.craigslist.org/search/nva/thp?s="
         # url, theraputic message services
 
