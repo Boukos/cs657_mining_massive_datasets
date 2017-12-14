@@ -31,7 +31,7 @@ def save_postings_to_csv(allPostings, fileName, verbose=False):
     with open(fileName, 'wb') as f:
         writer = csv.writer(f)
         for i in allPostings:
-            writer.writerow(i)
+            writer.writerow(str(i.decode('utf-8','ignore')))
 
 def get_time():
     return t.strftime('%d_%m_%d_%H_%M_%S')
@@ -193,7 +193,7 @@ def main():
         # postTitle, postingURL, postLocation, time, lat, long, address, dateRetrieved, post_date, ad
         scrape_all_pages(base_url, verbose)
         url_count += 1
-        sleep(500)
+        sleep(10)
 
 
     # call the top-level function
