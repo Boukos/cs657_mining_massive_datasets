@@ -1,2 +1,3 @@
-Homework assignments for CS657.  All assignments utilize Hadoop or Spark with Python.
+Homework assignments for CS657, mining massive datasets. Assignments are in Spark and Hadoop using the Python API.  Assignments include wordcount stuff, association rule mining, linear regression, and recommender systems. Final project is not in this repo but in my NOVA HTI personal repo.  The final project included scraping craigslist ads under similar topics to pull verbiage from the ads and use that verbiage to cluster the ads and see how similar those topics were. Set up an automatic scrapper that pushed results to database.  Pulled the data from the database and performed NLP and topic modeling in Spark to do the clustering.
+
 
